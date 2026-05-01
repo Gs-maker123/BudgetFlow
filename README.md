@@ -23,4 +23,4 @@ Application web complète pour suivre vos revenus et dépenses, avec catégories
 
 1. Clonez le dépôt :
    ```bash
-   git clone https://github.com/votre-utilisateur/BudgetFlow.git
+   git remote add origin https://github.com/Gs-maker123/BudgetFlow.git
