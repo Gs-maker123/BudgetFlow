@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>BudgetFlow - Gestionnaire de budget</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+<body>
+<div class="app-container">
+    <div class="budget-header">
+        <h1><i class="fas fa-wallet"></i> BudgetFlow</h1>
+        <div class="header-buttons">
+            <button class="btn-theme" id="themeToggleBtn" title="Thème clair/sombre"><i class="fas fa-moon"></i></button>
+            <button class="btn-monthly" id="openMonthlyBtn" title="Comparatif mensuel"><i class="fas fa-chart-bar"></i> Vue 12 mois</button>
+            <button class="btn-settings" id="openSettingsBtn" title="Paramètres avancés"><i class="fas fa-cog"></i></button>
+            <button class="btn-add" id="openAddModalBtn"><i class="fas fa-plus-circle"></i> Nouvelle transaction</button>
+            <button class="btn-savings" id="openSavingsBtn" title="Comptes épargne"><i class="fas fa-piggy-bank"></i> Épargne</button>
+            <button class="btn-duplicate" id="openDuplicateBtn" title="Dupliquer les données d'un mois"><i class="fas fa-copy"></i> Dupliquer mois</button>
+            <button class="btn-pdf" id="exportPdfBtn" title="Exporter en PDF"><i class="fas fa-file-pdf"></i> Export PDF</button>
+        </div>
+    </div>
+
+    <div class="cards-summary">
+        <div class="card previous-balance" id="previousBalanceCard" style="display: none;">
+            <div class="card-info">
+                <h3>Solde fin mois précédent</h3>
+                <div class="amount" id="previousBalance">0.00 €</div>
+            </div>
+            <div class="card-icon"><i class="fas fa-calendar-week"></i></div>
+        </div>
+        <div class="card balance">
+            <div class="card-info">
+                <h3>Solde fin de mois <span id="initialHint" class="initial-hint"></span></h3>
+                <div class="amount" id="totalBalance">0.00 €</div>
+            </div>
+            <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+        </div>
+        <div class="card revenues">
+            <div class="card-info">
+                <h3>Revenus</h3>
+                <div class="amount" id="totalRevenue">0.00 €</div>
+            </div>
+            <div class="card-icon"><i class="fas fa-arrow-up"></i></div>
+        </div>
+        <div class="card expenses">
+            <div class="card-info">
+                <h3>Dépenses</h3>
+                <div class="amount" id="totalExpense">0.00 €</div>
+            </div>
+            <div class="card-icon"><i class="fas fa-arrow-down"></i></div>
+        </div>
+    </div>
+
+    <!-- Totaux par catégorie -->
+    <div class="category-summary-card" id="categorySummaryContainer">
+        <h3><i class="fas fa-chart-pie"></i> Totaux par catégorie</h3>
+        <div id="categoryList" class="category-list">
+            <div class="empty-cats">Aucune catégorie pour le moment</div>
+        </div>
+    </div>
+
+    <!-- Filtre par mois -->
+    <div class="month-filter">
+        <label for="monthSelect"><i class="fas fa-calendar-alt"></i> Afficher les mouvements du :</label>
+        <select id="monthSelect"></select>
+        <button id="resetMonthFilter" class="btn-reset-filter" title="Afficher tous les mois"><i class="fas fa-undo-alt"></i> Tous les mois</button>
+    </div>
+
+    <!-- Vue mensuelle (comparatif 12 mois) -->
+    <div id="monthlyView" class="monthly-view" style="display: none;">
+    <div class="monthly-table-wrapper">
+        <div class="monthly-header">
+            <h3><i class="fas fa-calendar-alt"></i> Comparatif mensuel (12 derniers mois)</h3>
+            <button class="btn-pdf-monthly" id="exportMonthlyPdfBtn" title="Exporter ce tableau en PDF">
+                <i class="fas fa-file-pdf"></i> Export PDF
+            </button>
+        </div>
+        <div id="monthlyTableContainer"></div>
+    </div>
+</div>
+
+    <!-- Section comptes épargne -->
+<div id="savingsView" class="savings-view" style="display: none;">
+    <div class="savings-wrapper">
+        <div class="savings-header">
+            <h3><i class="fas fa-piggy-bank"></i> Comptes d'épargne personnalisés</h3>
+            <button class="btn-add-savings" id="addSavingsAccountBtn"><i class="fas fa-plus"></i> Nouveau compte</button>
+        </div>
+        <div id="savingsAccountsList" class="savings-accounts-list">
+            <div class="empty-savings">Aucun compte épargne. Cliquez sur "Nouveau compte" pour commencer.</div>
+        </div>
+        <div class="savings-total">
+            Total épargne : <span id="totalSavings">0.00 €</span>
+        </div>
+    </div>
+</div>
+
+<!-- Modale pour ajouter/modifier un compte épargne -->
+<div id="savingsModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="savingsModalTitle">Ajouter un compte épargne</h3>
+        <form id="savingsForm">
+            <div class="form-group">
+                <label>Nom du compte *</label>
+                <input type="text" id="savingsName" placeholder="Ex: Livret A, PEL, Cryptos..." required>
+            </div>
+            <div class="form-group">
+                <label>Solde initial (€)</label>
+                <input type="number" id="savingsInitialBalance" step="0.01" value="0">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-cancel" id="closeSavingsModalBtn">Annuler</button>
+                <button type="submit" class="btn-modal btn-save">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modale pour opération sur compte épargne (ajouter/retirer) -->
+<div id="savingsOperationModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="operationModalTitle">Opération sur le compte</h3>
+        <form id="savingsOperationForm">
+            <input type="hidden" id="opAccountId">
+            <div class="form-group">
+                <label>Montant (€)</label>
+                <input type="number" id="opAmount" step="0.01" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+                <label>Type</label>
+                <select id="opType">
+                    <option value="credit">Crédit (+)</option>
+                    <option value="debit">Débit (-)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Description (optionnelle)</label>
+                <input type="text" id="opDescription" placeholder="Ex: Virement mensuel">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-cancel" id="closeOpModalBtn">Annuler</button>
+                <button type="submit" class="btn-modal btn-save">Effectuer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+    <div class="transactions-header">
+        <h2><i class="fas fa-list-ul"></i> Mouvements</h2>
+        <div class="sort-controls">
+            <label for="sortSelect">Trier par :</label>
+            <select id="sortSelect">
+                <option value="manual">Par défaut</option>
+                <option value="category">Catégorie (A → Z)</option>
+                <option value="date_desc">Date (récent → ancien)</option>
+                <option value="date_asc">Date (ancien → récent)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="transaction-list" id="transactionListContainer">
+        <div class="empty-list">Aucune transaction. Cliquez sur "Nouvelle transaction" ✨</div>
+    </div>
+
+    <footer>
+        BudgetFlow by GSTK • <i class="fas fa-chart-simple"></i> Catégories personnalisées • Édition modale • Ordre modifiable par glissé • Solde initial configurable
+    </footer>
+</div>
+
+<!-- MODALE transaction (ajout/édition) -->
+<div id="transactionModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="modalTitle">Ajouter une transaction</h3>
+        <form id="transactionForm">
+            <div class="form-group">
+                <label>Description *</label>
+                <input type="text" id="descInput" placeholder="Ex: Café, Salaire, Courses..." required>
+            </div>
+            <div class="form-group">
+                <label>Montant (€) *</label>
+                <input type="number" id="amountInput" step="0.01" min="0.01" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+                <label>Catégorie</label>
+                <input type="text" id="categoryInput" list="categorySuggestions" placeholder="Alimentation, Transport, Loyer...">
+                <datalist id="categorySuggestions">
+                    <option>Alimentation</option>
+                    <option>Transport</option>
+                    <option>Loyer / Logement</option>
+                    <option>Factures</option>
+                    <option>Loisirs</option>
+                    <option>Salaire</option>
+                    <option>Freelance</option>
+                    <option>Santé</option>
+                    <option>Éducation</option>
+                    <option>Autre</option>
+                </datalist>
+            </div>
+            <div class="form-group">
+                <label>Type</label>
+                <select id="typeSelect">
+                    <option value="expense">Dépense 💸</option>
+                    <option value="revenue">Revenu 💰</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" id="dateInput">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-cancel" id="closeModalBtn">Annuler</button>
+                <button type="submit" class="btn-modal btn-save">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODALE duplication de mois -->
+<div id="duplicateModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3><i class="fas fa-copy"></i> Dupliquer les transactions d'un mois</h3>
+        <form id="duplicateForm">
+            <div class="form-group">
+                <label>Mois source</label>
+                <input type="month" id="sourceMonth" required>
+            </div>
+            <div class="form-group">
+                <label>Mois cible</label>
+                <input type="month" id="targetMonth" required>
+            </div>
+            <div class="form-group">
+                <label>Options</label>
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="overwriteTarget" checked>
+                    Remplacer les transactions existantes dans le mois cible
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-cancel" id="closeDuplicateModalBtn">Annuler</button>
+                <button type="submit" class="btn-modal btn-save">Dupliquer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODALE paramètres avancés -->
+<div id="settingsModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3><i class="fas fa-sliders-h"></i> Paramètres avancés</h3>
+        <form id="settingsForm">
+            <div class="form-group">
+                <label>Montant initial (solde de départ)</label>
+                <input type="number" id="initialAmountInput" step="0.01" placeholder="Ex: 1000.00">
+            </div>
+            <div class="form-group">
+                <label>Devise</label>
+                <select id="currencySelect">
+                    <option value="€">Euro (€)</option>
+                    <option value="$">Dollar ($)</option>
+                    <option value="£">Livre (£)</option>
+                    <option value="¥">Yen (¥)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Affichage des montants</label>
+                <select id="displayFormatSelect">
+                    <option value="sign">Avec signe (+ / -)</option>
+                    <option value="paren">Entre parenthèses (dépenses)</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-cancel" id="closeSettingsBtn">Annuler</button>
+                <button type="submit" class="btn-modal btn-save">Enregistrer les paramètres</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bouton retour en haut -->
+<button id="scrollTopBtn" class="scroll-top-btn" title="Retour en haut">
+    <i class="fas fa-arrow-up"></i>
+</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="comparaison.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
