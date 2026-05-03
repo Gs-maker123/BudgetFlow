@@ -1073,3 +1073,231 @@ body.dark-mode .previous-balance .amount {
 .negative {
     color: var(--expense-color) !important;
 }
+
+/* ===== RESPONSIVE GLOBAL ===== */
+
+/* Écrans très larges (>= 1600px) */
+@media (min-width: 1600px) {
+    .app-container {
+        max-width: 1600px;
+        padding: 2rem 2.5rem;
+    }
+    .cards-summary {
+        gap: 1.5rem;
+    }
+    .transaction-info {
+        grid-template-columns: minmax(180px, 2fr) minmax(150px, 1.5fr) minmax(120px, 1fr) minmax(110px, 0.8fr);
+    }
+}
+
+/* Tablette paysage / petits ordinateurs (768px - 1024px) */
+@media (max-width: 1024px) {
+    .app-container {
+        padding: 1.5rem;
+    }
+    h1 {
+        font-size: 1.5rem;
+    }
+    .card-info .amount {
+        font-size: 1.5rem;
+    }
+    .card-icon {
+        font-size: 2rem;
+    }
+    .btn-add, .btn-settings, .btn-theme, .btn-monthly, .btn-savings, .btn-duplicate, .btn-pdf {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.85rem;
+    }
+    .category-item {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.8rem;
+    }
+}
+
+/* Tablette portrait (600px - 768px) */
+@media (max-width: 768px) {
+    .cards-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .transaction-info {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    .transaction-desc {
+        white-space: normal;
+    }
+    .transaction-amount, .transaction-date {
+        text-align: left;
+    }
+    .sort-controls {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 0.5rem;
+    }
+    .month-filter {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .month-filter select, .month-filter button {
+        width: 100%;
+    }
+    .savings-accounts-list {
+        grid-template-columns: 1fr;
+    }
+    .monthly-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .btn-pdf-monthly {
+        align-self: flex-start;
+    }
+    .header-buttons {
+        gap: 8px;
+    }
+    .btn-add, .btn-settings, .btn-theme, .btn-monthly, .btn-savings, .btn-duplicate, .btn-pdf {
+        padding: 0.5rem 0.7rem;
+        font-size: 0.75rem;
+    }
+    .btn-add i, .btn-settings i, .btn-theme i, .btn-monthly i, .btn-savings i, .btn-duplicate i, .btn-pdf i {
+        font-size: 0.9rem;
+    }
+}
+
+/* Mobile (<= 600px) */
+@media (max-width: 600px) {
+    body {
+        padding: 0.5rem;
+    }
+    .app-container {
+        padding: 1rem;
+        border-radius: 1rem;
+    }
+    h1 {
+        font-size: 1.2rem;
+    }
+    .budget-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.8rem;
+    }
+    .header-buttons {
+        flex-wrap: wrap;
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .btn-add, .btn-settings, .btn-theme, .btn-monthly, .btn-savings, .btn-duplicate, .btn-pdf {
+        flex: 1 0 auto;
+        justify-content: center;
+    }
+    .cards-summary {
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+    }
+    .card {
+        padding: 1rem;
+    }
+    .card-info .amount {
+        font-size: 1.3rem;
+    }
+    .category-summary-card, .monthly-table-wrapper, .savings-wrapper {
+        padding: 1rem;
+    }
+    .category-list {
+        gap: 0.5rem;
+    }
+    .transaction-item {
+        flex-wrap: wrap;
+        padding: 0.8rem;
+    }
+    .drag-area {
+        order: 0;
+    }
+    .transaction-info {
+        order: 1;
+        width: 100%;
+    }
+    .transaction-actions {
+        order: 2;
+        margin-left: auto;
+    }
+    .scroll-top-btn {
+        bottom: 1rem;
+        right: 1rem;
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    footer {
+        font-size: 0.65rem;
+    }
+}
+
+/* Très petit mobile (<= 380px) */
+@media (max-width: 380px) {
+    .btn-add, .btn-settings, .btn-theme, .btn-monthly, .btn-savings, .btn-duplicate, .btn-pdf {
+        font-size: 0.7rem;
+        padding: 0.4rem 0.5rem;
+    }
+    .btn-add span, .btn-settings span, .btn-theme span, .btn-monthly span, .btn-savings span, .btn-duplicate span, .btn-pdf span {
+        display: none;
+    }
+    .btn-add i, .btn-settings i, .btn-theme i, .btn-monthly i, .btn-savings i, .btn-duplicate i, .btn-pdf i {
+        margin: 0;
+    }
+    /* Seulement l'icône visible */
+    .btn-add, .btn-settings, .btn-theme, .btn-monthly, .btn-savings, .btn-duplicate, .btn-pdf {
+        min-width: 36px;
+        justify-content: center;
+    }
+    .card-info h3 {
+        font-size: 0.7rem;
+    }
+    .transaction-category {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+    }
+}
+
+/* Correction pour le tableau comparatif mensuel (défilement horizontal) */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Meilleure lisibilité pour les modales sur mobile */
+@media (max-width: 600px) {
+    .modal-content {
+        width: 95%;
+        padding: 1rem;
+        margin-top: 2vh;
+    }
+    .modal-content h3 {
+        font-size: 1.3rem;
+    }
+    .form-group label {
+        font-size: 0.85rem;
+    }
+    .form-group input, .form-group select {
+        padding: 0.6rem;
+        font-size: 0.85rem;
+    }
+    .btn-modal {
+        padding: 0.5rem 1rem;
+    }
+}
+
+/* Amélioration du défilement des transactions */
+.transaction-list {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+@media (max-width: 768px) {
+    .transaction-list {
+        max-height: 50vh;
+    }
+}
+@media (max-width: 600px) {
+    .transaction-list {
+        max-height: 45vh;
+    }
+}
