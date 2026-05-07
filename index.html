@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2c7a3e">
+    <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAEX0lEQVR4nO2dP2jUUBDGZzeJiCjY2CgIKggilWChYBGkVKxEsEoLIUpFEFQQwU5FULCxUATbrAiiIEKrxUqKlDYWgkUooYhWQhYv20psbOy/vF/i5ZLsJbvdvN17k51vmLV575uZnZ2dN2FrvkTTNLdlWX4URbFhmqZnmqZpWZIkhDwPo6Oj+yYnJx/U63WWIs/zPcfxzHsCLM/zEaZpmhMTEyfq9Xo2mUzmRVFcz+fzLp1Ho9E43m63h/x1Dod9PwzDM8ViMZVOp4PE2Ww2S4VCgVqtxo7jmK7rUhiGVKlUjGq1SgD+MplMpkxMTMzyeCvx+Pj4g83mM9RqNfI8b+Zc5Hne3mAwKFerVSYtFotQFEVK5XIZ+Xg8TpZlUS6XM7IsQxiGwuA+i8UihGG4YQ8qT3/WiKKoF4ahB4CS6u7t7aVjx45tW5lqtRobXXk2m6VcLrdFpKPRKOVyuQ/9/f0ZOp5H5Kj3pmnuC/83vSJyuVz2UzAYvNhsNomIeru9NMC/twphGEqDg4OKLMtHxL85A4JhGOp2dPRYc3EUKxEymUzEQiGSJEmEYRgA23Ec4TiOPDw8HCmKIqIokqCYEh8RY2NjsuM4PY7jhI7j9CaTSUomk9HmrmGxWASGYZAoilc4f2lI+QghWZYl3/fTQRAEiSRJBLKi30p8hBApSRJJFEWSZVkGAAPlP/ERQrLpdDqXyWSy6XQ6B0DRBf+s8hVCQhRFkcvlcmmaplmWZaEoihAA0fW8nwghQZZlmeM4PdcRYWNjY4UoimIYhgHAdl03Fvt+kThCCACMjo4mBweNhPwViSDEdV2L8iUwlsvlMBzHURiGIQAYwzCkai43iZMQouiaouTxH7pR9iXjI4Toui4CoKmqKsuyXCkUCpFpmmFzcxMAyFVVJXmwsZG4CSEQALW2tiYuLi4y/TD/Wix+aVCklSCEXNdlxWKRBEFgpmkaBUCzWCyCJEliKpWidrtNDMOQBRGtR2uNkO/grFQqheu6MvVHVVUZAOnjHXGzWIwQANJnn31Gp6am2pKT0+l0Cn0FwCgsRCQQEfiq9SUfkUAI+XsoJ0I8z7Oy2ewbjHFMn5D6CCE+nU7H27dvXyOO48jzPIqiiFzXJc/zKI5jsiyLPM+jJEkIY0yA8A0R0Wg0yEej0XgYhnuIMCwUClEQBKEkSVIURWE49/pre3t7bWxs7D5fh38C+2EYDnmed9DzvIPd3d2HPM87FEURy7IssizLsiwjI0nTtBzHcflcPp8bHx8/+fXXX7mvvfYaTp48GXd3d+etVkutra2p4K/9SGVnZ2d3sVg89i+B/xphHO/bty+8e/fuVAA8LJfLm2ZmZn4Xy+XyYqVS2bC+vp6v1+tps9mUBGH5p6dv3759MysrK/eBv/pqNBpP0ul08sKFCz6oPwQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoH444EAgP8BkFw/TEMjLzUAAAAASUVORK5CYII=">
 </head>
 <body>
 <div class="app-container">
@@ -67,6 +70,25 @@
         <label for="monthSelect"><i class="fas fa-calendar-alt"></i> Afficher les mouvements du :</label>
         <select id="monthSelect"></select>
         <button id="resetMonthFilter" class="btn-reset-filter" title="Afficher tous les mois"><i class="fas fa-undo-alt"></i> Tous les mois</button>
+    </div>
+
+    <!-- Barre d'actions rapide (sticky) -->
+    <div class="quick-action-bar">
+        <button class="quick-action-btn" id="qaAddBtn" title="Ajouter une transaction">
+            <i class="fas fa-plus-circle"></i>
+        </button>
+        <button class="quick-action-btn" id="qaEditBtn" title="Modifier la transaction sélectionnée" disabled>
+            <i class="fas fa-pen"></i>
+        </button>
+        <button class="quick-action-btn" id="qaDeleteBtn" title="Supprimer la transaction sélectionnée" disabled>
+            <i class="fas fa-trash-alt"></i>
+        </button>
+        <button class="quick-action-btn" id="qaDuplicateBtn" title="Dupliquer la transaction sélectionnée" disabled>
+            <i class="fas fa-copy"></i>
+        </button>
+        <button class="quick-action-btn" id="qaSaveBtn" title="Enregistrer les modifications">
+            <i class="fas fa-save"></i>
+        </button>
     </div>
 
     <!-- Vue mensuelle (comparatif 12 mois) -->
