@@ -1301,3 +1301,57 @@ body.dark-mode .previous-balance .amount {
         max-height: 45vh;
     }
 }
+
+/* Barre d'actions rapide (sticky) */
+.quick-action-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border-radius: 3rem;
+    padding: 0.5rem 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 0.8rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.quick-action-btn {
+    background: var(--btn-cancel-bg);
+    border: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    color: var(--text-primary);
+    background: var(--category-bg);
+}
+.quick-action-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+    background: var(--revenue-color);
+    color: white;
+}
+.quick-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+@media (max-width: 600px) {
+    .quick-action-bar {
+        justify-content: space-around;
+        gap: 0.3rem;
+        padding: 0.3rem 0.5rem;
+    }
+    .quick-action-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 1rem;
+    }
+}
