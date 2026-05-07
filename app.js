@@ -4,6 +4,7 @@ let sortableInstance = null;
 let currentEditId = null;
 let isDarkMode = false;
 let currentFilterMonth = null; // null = tous, sinon "YYYY-MM"
+let selectedTransactionId = null; // pour la barre d'actions rapide
 
 let appSettings = {
     initialAmount: 0,
@@ -132,7 +133,7 @@ function saveToLocalStorage() {
     localStorage.setItem('budgetTransactions', JSON.stringify(transactions));
 }
 
-// Migration pour garantir des IDs uniques (pour éviter les doublons après duplication)
+// Migration pour garantir des IDs uniques
 function repairDuplicateIds() {
     let ids = new Set();
     let changed = false;
@@ -169,7 +170,6 @@ function loadInitialData() {
         if (!t.date) t.date = new Date().toISOString().slice(0,10);
         return t;
     });
-    // Réparer les IDs en double potentiels
     repairDuplicateIds();
     saveToLocalStorage();
 }
@@ -180,7 +180,6 @@ function updateSummary() {
     const previousSpan = document.getElementById('previousBalance');
     let totalRev = 0, totalExp = 0;
 
-    // Calcule le solde cumulé jusqu'à une date donnée
     function getCumulativeBalance(untilDate) {
         let balance = appSettings.initialAmount;
         const sorted = [...transactions].sort((a,b) => new Date(a.date) - new Date(b.date));
@@ -193,21 +192,16 @@ function updateSummary() {
         return balance;
     }
 
-    // Formate un montant (peut être négatif) selon les préférences d'affichage
     function formatSignedAmount(amount) {
         if (appSettings.displayFormat === 'sign') {
             let sign = amount >= 0 ? '+ ' : '- ';
             return `${sign}${Math.abs(amount).toFixed(2)} ${appSettings.currency}`;
         } else {
-            if (amount < 0) {
-                return `(${Math.abs(amount).toFixed(2)} ${appSettings.currency})`;
-            } else {
-                return `${amount.toFixed(2)} ${appSettings.currency}`;
-            }
+            if (amount < 0) return `(${Math.abs(amount).toFixed(2)} ${appSettings.currency})`;
+            else return `${amount.toFixed(2)} ${appSettings.currency}`;
         }
     }
 
-    // Applique la classe de couleur selon le signe
     function setColorClass(element, amount) {
         if (amount >= 0) {
             element.classList.remove('negative');
@@ -221,31 +215,21 @@ function updateSummary() {
     if (currentFilterMonth && currentFilterMonth !== '') {
         const [year, month] = currentFilterMonth.split('-');
         const yearNum = parseInt(year), monthNum = parseInt(month);
-        
-        // Dernier jour du mois courant
         const lastDayCurrent = new Date(yearNum, monthNum, 0).getDate();
         const endCurrentDate = `${currentFilterMonth}-${String(lastDayCurrent).padStart(2,'0')}`;
-        
-        // Mois précédent
         let prevYear = yearNum, prevMonth = monthNum - 1;
-        if (prevMonth === 0) {
-            prevMonth = 12;
-            prevYear--;
-        }
+        if (prevMonth === 0) { prevMonth = 12; prevYear--; }
         const prevMonthStr = `${prevYear}-${String(prevMonth).padStart(2,'0')}`;
         const lastDayPrev = new Date(prevYear, prevMonth, 0).getDate();
         const endPrevDate = `${prevMonthStr}-${String(lastDayPrev).padStart(2,'0')}`;
         
-        // Solde fin mois précédent
         const balancePrevMonth = getCumulativeBalance(endPrevDate);
         previousSpan.innerText = formatSignedAmount(balancePrevMonth);
         setColorClass(previousSpan, balancePrevMonth);
         previousCard.style.display = 'flex';
         
-        // Solde fin mois courant
         const balanceCurrent = getCumulativeBalance(endCurrentDate);
         
-        // Revenus et dépenses du mois courant uniquement
         totalRev = transactions.reduce((sum, t) => {
             if (t.date && t.date.startsWith(currentFilterMonth) && t.type === 'revenue') return sum + t.amount;
             return sum;
@@ -257,7 +241,6 @@ function updateSummary() {
         
         totalRevenueSpan.innerText = formatAmountWithSettings(totalRev, 'revenue');
         totalExpenseSpan.innerText = formatAmountWithSettings(totalExp, 'expense');
-        // Revenus toujours verts, dépenses toujours rouges
         totalRevenueSpan.classList.remove('negative');
         totalRevenueSpan.classList.add('positive');
         totalExpenseSpan.classList.remove('positive');
@@ -266,7 +249,6 @@ function updateSummary() {
         totalBalanceSpan.innerText = formatSignedAmount(balanceCurrent);
         setColorClass(totalBalanceSpan, balanceCurrent);
     } else {
-        // Vue globale (tous les mois)
         previousCard.style.display = 'none';
         transactions.forEach(t => {
             if (t.type === 'revenue') totalRev += t.amount;
@@ -288,13 +270,10 @@ function updateSummary() {
 // ===== RÉSUMÉ PAR CATÉGORIE =====
 function renderCategorySummary() {
     const categoryMap = new Map();
-    
-    // Filtrer les transactions selon le mois sélectionné (ou toutes si pas de filtre)
     let filteredTransactions = transactions;
     if (currentFilterMonth && currentFilterMonth !== '') {
         filteredTransactions = transactions.filter(t => t.date && t.date.startsWith(currentFilterMonth));
     }
-    
     filteredTransactions.forEach(t => {
         const cat = t.category || 'Divers';
         if (!categoryMap.has(cat)) categoryMap.set(cat, { revenue: 0, expense: 0 });
@@ -302,11 +281,8 @@ function renderCategorySummary() {
         if (t.type === 'revenue') entry.revenue += t.amount;
         else entry.expense += t.amount;
     });
-    
     const container = document.getElementById('categoryList');
     if (!container) return;
-    
-    // Mettre à jour le titre de la carte pour indiquer le mois filtré
     const titleElement = document.querySelector('#categorySummaryContainer h3');
     if (titleElement) {
         if (currentFilterMonth && currentFilterMonth !== '') {
@@ -317,12 +293,10 @@ function renderCategorySummary() {
             titleElement.innerHTML = `<i class="fas fa-chart-pie"></i> Totaux par catégorie (tous les mois)`;
         }
     }
-    
     if (categoryMap.size === 0) {
         container.innerHTML = '<div class="empty-cats">Aucune catégorie pour cette période</div>';
         return;
     }
-    
     let html = '';
     for (let [cat, totals] of categoryMap.entries()) {
         const net = totals.revenue - totals.expense;
@@ -343,9 +317,7 @@ function renderCategorySummary() {
 function updateMonthSelect() {
     const monthSet = new Set();
     transactions.forEach(t => {
-        if (t.date && t.date.length >= 7) {
-            monthSet.add(t.date.substring(0, 7));
-        }
+        if (t.date && t.date.length >= 7) monthSet.add(t.date.substring(0, 7));
     });
     const months = Array.from(monthSet).sort().reverse();
     const select = document.getElementById('monthSelect');
@@ -381,9 +353,7 @@ function initMonthFilter() {
         else setMonthFilter(value);
     });
     const resetBtn = document.getElementById('resetMonthFilter');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', () => setMonthFilter(null));
-    }
+    if (resetBtn) resetBtn.addEventListener('click', () => setMonthFilter(null));
 }
 
 // ===== TRI =====
@@ -409,12 +379,12 @@ function applySorting() {
     saveToLocalStorage();
 }
 
-// ===== RENDU LISTE (avec filtre) =====
+// ===== RENDU LISTE (avec sélection) =====
 function renderTransactionList() {
     if (!listContainer) return;
     let filteredTransactions = transactions;
     if (currentFilterMonth && currentFilterMonth !== '') {
-        filteredTransactions = transactions.filter(t => t.date && t.date.startsWith(currentFilterMonth));
+        filteredTransactions = filteredTransactions.filter(t => t.date && t.date.startsWith(currentFilterMonth));
     }
     if (filteredTransactions.length === 0) {
         listContainer.innerHTML = `<div class="empty-list"><i class="fas fa-receipt"></i> Aucune transaction pour cette période.</div>`;
@@ -441,6 +411,14 @@ function renderTransactionList() {
         `;
     });
     listContainer.innerHTML = html;
+    // Attacher événements pour la sélection
+    document.querySelectorAll('.transaction-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            if (e.target.closest('.action-btn')) return;
+            const id = item.getAttribute('data-id');
+            selectTransaction(id);
+        });
+    });
     document.querySelectorAll('.action-btn.edit').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -455,6 +433,41 @@ function renderTransactionList() {
             deleteTransactionById(id);
         });
     });
+}
+
+// Sélection de transaction pour la barre d'actions
+function selectTransaction(transactionId) {
+    selectedTransactionId = transactionId;
+    const editBtn = document.getElementById('qaEditBtn');
+    const deleteBtn = document.getElementById('qaDeleteBtn');
+    const duplicateBtn = document.getElementById('qaDuplicateBtn');
+    if (editBtn) editBtn.disabled = !transactionId;
+    if (deleteBtn) deleteBtn.disabled = !transactionId;
+    if (duplicateBtn) duplicateBtn.disabled = !transactionId;
+    // Surligner la ligne sélectionnée
+    document.querySelectorAll('.transaction-item').forEach(item => {
+        item.classList.remove('selected-transaction');
+    });
+    if (transactionId) {
+        const selectedElement = document.querySelector(`.transaction-item[data-id="${transactionId}"]`);
+        if (selectedElement) selectedElement.classList.add('selected-transaction');
+    }
+}
+
+function duplicateTransactionById(id) {
+    const original = transactions.find(t => t.id === id);
+    if (!original) return;
+    const newTransaction = {
+        id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
+        description: original.description,
+        amount: original.amount,
+        category: original.category,
+        type: original.type,
+        date: new Date().toISOString().slice(0,10)
+    };
+    transactions.push(newTransaction);
+    fullRefresh();
+    alert("Transaction dupliquée avec succès.");
 }
 
 function syncOrderFromDOM() {
@@ -495,6 +508,7 @@ function initSortable() {
 function deleteTransactionById(id) {
     if (confirm('Supprimer cette transaction ?')) {
         transactions = transactions.filter(t => t.id !== id);
+        if (selectedTransactionId === id) selectTransaction(null);
         fullRefresh();
     }
 }
@@ -775,6 +789,39 @@ async function exportToPDF() {
     }
 }
 
+// ===== BARRE D'ACTIONS RAPIDE =====
+function initQuickActionBar() {
+    const addBtn = document.getElementById('qaAddBtn');
+    const editBtn = document.getElementById('qaEditBtn');
+    const deleteBtn = document.getElementById('qaDeleteBtn');
+    const duplicateBtn = document.getElementById('qaDuplicateBtn');
+    const saveBtn = document.getElementById('qaSaveBtn');
+    if (addBtn) addBtn.addEventListener('click', () => openAddModal());
+    if (editBtn) editBtn.addEventListener('click', () => {
+        if (selectedTransactionId) openEditModal(selectedTransactionId);
+    });
+    if (deleteBtn) deleteBtn.addEventListener('click', () => {
+        if (selectedTransactionId) deleteTransactionById(selectedTransactionId);
+    });
+    if (duplicateBtn) duplicateBtn.addEventListener('click', () => {
+        if (selectedTransactionId) duplicateTransactionById(selectedTransactionId);
+    });
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            if (modalOverlay.classList.contains('active') && transactionForm) {
+                const submitEvent = new Event('submit', { cancelable: true, bubbles: true });
+                transactionForm.dispatchEvent(submitEvent);
+            } else {
+                alert("Aucune transaction en cours d'édition.");
+            }
+        });
+    }
+    // Désactiver initialement les boutons qui nécessitent une sélection
+    if (editBtn) editBtn.disabled = true;
+    if (deleteBtn) deleteBtn.disabled = true;
+    if (duplicateBtn) duplicateBtn.disabled = true;
+}
+
 // ===== RAFRAÎCHISSEMENT GLOBAL =====
 function fullRefresh() {
     renderTransactionList();
@@ -783,6 +830,10 @@ function fullRefresh() {
     updateMonthSelect();
     saveToLocalStorage();
     initSortable();
+    // Si aucune transaction visible, désactiver la sélection
+    if (document.querySelectorAll('.transaction-item').length === 0) {
+        selectTransaction(null);
+    }
 }
 
 // ===== INITIALISATION =====
@@ -808,6 +859,7 @@ function init() {
     initMonthFilter();
     loadSavingsAccounts();
     renderSavingsAccounts();
+    initQuickActionBar();
 
     // Événements principaux
     openAddBtn.addEventListener('click', openAddModal);
