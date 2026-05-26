@@ -2,8 +2,6 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232c7a3e'/%3E%3Ctext x='50' y='72' font-size='60' text-anchor='middle' fill='white' font-weight='bold'%3E€%3C/text%3E%3C/svg%3E">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>BudgetFlow - Gestionnaire de budget</title>
     <link rel="stylesheet" href="style.css">
@@ -11,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2c7a3e">
-    <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAEX0lEQVR4nO2dP2jUUBDGZzeJiCjY2CgIKggilWChYBGkVKxEsEoLIUpFEFQQwU5FULCxUATbrAiiIEKrxUqKlDYWgkUooYhWQhYv20psbOy/vF/i5ZLsJbvdvN17k51vmLV575uZnZ2dN2FrvkTTNLdlWX4URbFhmqZnmqZpWZIkhDwPo6Oj+yYnJx/U63WWIs/zPcfxzHsCLM/zEaZpmhMTEyfq9Xo2mUzmRVFcz+fzLp1Ho9E43m63h/x1Dod9PwzDM8ViMZVOp4PE2Ww2S4VCgVqtxo7jmK7rUhiGVKlUjGq1SgD+MplMpkxMTMzyeCvx+Pj4g83mM9RqNfI8b+Zc5Hne3mAwKFerVSYtFotQFEVK5XIZ+Xg8TpZlUS6XM7IsQxiGwuA+i8UihGG4YQ8qT3/WiKKoF4ahB4CS6u7t7aVjx45tW5lqtRobXXk2m6VcLrdFpKPRKOVyuQ/9/f0ZOp5H5Kj3pmnuC/83vSJyuVz2UzAYvNhsNomIeru9NMC/twphGEqDg4OKLMtHxL85A4JhGOp2dPRYc3EUKxEymUzEQiGSJEmEYRgA23Ec4TiOPDw8HCmKIqIokqCYEh8RY2NjsuM4PY7jhI7j9CaTSUomk9HmrmGxWASGYZAoilc4f2lI+QghWZYl3/fTQRAEiSRJBLKi30p8hBApSRJJFEWSZVkGAAPlP/ERQrLpdDqXyWSy6XQ6B0DRBf+s8hVCQhRFkcvlcmmaplmWZaEoihAA0fW8nwghQZZlmeM4PdcRYWNjY4UoimIYhgHAdl03Fvt+kThCCACMjo4mBweNhPwViSDEdV2L8iUwlsvlMBzHURiGIQAYwzCkai43iZMQouiaouTxH7pR9iXjI4Toui4CoKmqKsuyXCkUCpFpmmFzcxMAyFVVJXmwsZG4CSEQALW2tiYuLi4y/TD/Wix+aVCklSCEXNdlxWKRBEFgpmkaBUCzWCyCJEliKpWidrtNDMOQBRGtR2uNkO/grFQqheu6MvVHVVUZAOnjHXGzWIwQANJnn31Gp6am2pKT0+l0Cn0FwCgsRCQQEfiq9SUfkUAI+XsoJ0I8z7Oy2ewbjHFMn5D6CCE+nU7H27dvXyOO48jzPIqiiFzXJc/zKI5jsiyLPM+jJEkIY0yA8A0R0Wg0yEej0XgYhnuIMCwUClEQBKEkSVIURWE49/pre3t7bWxs7D5fh38C+2EYDnmed9DzvIPd3d2HPM87FEURy7IssizLsiwjI0nTtBzHcflcPp8bHx8/+fXXX7mvvfYaTp48GXd3d+etVkutra2p4K/9SGVnZ2d3sVg89i+B/xphHO/bty+8e/fuVAA8LJfLm2ZmZn4Xy+XyYqVS2bC+vp6v1+tps9mUBGH5p6dv3759MysrK/eBv/pqNBpP0ul08sKFCz6oPwQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoH444EAgP8BkFw/TEMjLzUAAAAASUVORK5CYII=">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232c7a3e'/%3E%3Ctext x='50' y='72' font-size='60' text-anchor='middle' fill='white' font-weight='bold'%3E€%3C/text%3E%3C/svg%3E">
 </head>
 <body>
 <div class="app-container">
@@ -74,7 +72,7 @@
         <button id="resetMonthFilter" class="btn-reset-filter" title="Afficher tous les mois"><i class="fas fa-undo-alt"></i> Tous les mois</button>
     </div>
 
-    <!-- Barre d'actions rapide (sticky) -->
+    <!-- BARRE D'ACTIONS RAPIDE (STICKY) -->
     <div class="quick-action-bar">
         <button class="quick-action-btn" id="qaAddBtn" title="Ajouter une transaction">
             <i class="fas fa-plus-circle"></i>
@@ -95,82 +93,32 @@
 
     <!-- Vue mensuelle (comparatif 12 mois) -->
     <div id="monthlyView" class="monthly-view" style="display: none;">
-    <div class="monthly-table-wrapper">
-        <div class="monthly-header">
-            <h3><i class="fas fa-calendar-alt"></i> Comparatif mensuel (12 derniers mois)</h3>
-            <button class="btn-pdf-monthly" id="exportMonthlyPdfBtn" title="Exporter ce tableau en PDF">
-                <i class="fas fa-file-pdf"></i> Export PDF
-            </button>
+        <div class="monthly-table-wrapper">
+            <div class="monthly-header">
+                <h3><i class="fas fa-calendar-alt"></i> Comparatif mensuel (12 derniers mois)</h3>
+                <button class="btn-pdf-monthly" id="exportMonthlyPdfBtn" title="Exporter ce tableau en PDF">
+                    <i class="fas fa-file-pdf"></i> Export PDF
+                </button>
+            </div>
+            <div id="monthlyTableContainer"></div>
         </div>
-        <div id="monthlyTableContainer"></div>
     </div>
-</div>
 
     <!-- Section comptes épargne -->
-<div id="savingsView" class="savings-view" style="display: none;">
-    <div class="savings-wrapper">
-        <div class="savings-header">
-            <h3><i class="fas fa-piggy-bank"></i> Comptes d'épargne personnalisés</h3>
-            <button class="btn-add-savings" id="addSavingsAccountBtn"><i class="fas fa-plus"></i> Nouveau compte</button>
-        </div>
-        <div id="savingsAccountsList" class="savings-accounts-list">
-            <div class="empty-savings">Aucun compte épargne. Cliquez sur "Nouveau compte" pour commencer.</div>
-        </div>
-        <div class="savings-total">
-            Total épargne : <span id="totalSavings">0.00 €</span>
+    <div id="savingsView" class="savings-view" style="display: none;">
+        <div class="savings-wrapper">
+            <div class="savings-header">
+                <h3><i class="fas fa-piggy-bank"></i> Comptes d'épargne personnalisés</h3>
+                <button class="btn-add-savings" id="addSavingsAccountBtn"><i class="fas fa-plus"></i> Nouveau compte</button>
+            </div>
+            <div id="savingsAccountsList" class="savings-accounts-list">
+                <div class="empty-savings">Aucun compte épargne. Cliquez sur "Nouveau compte" pour commencer.</div>
+            </div>
+            <div class="savings-total">
+                Total épargne : <span id="totalSavings">0.00 €</span>
+            </div>
         </div>
     </div>
-</div>
-
-<!-- Modale pour ajouter/modifier un compte épargne -->
-<div id="savingsModal" class="modal-overlay">
-    <div class="modal-content">
-        <h3 id="savingsModalTitle">Ajouter un compte épargne</h3>
-        <form id="savingsForm">
-            <div class="form-group">
-                <label>Nom du compte *</label>
-                <input type="text" id="savingsName" placeholder="Ex: Livret A, PEL, Cryptos..." required>
-            </div>
-            <div class="form-group">
-                <label>Solde initial (€)</label>
-                <input type="number" id="savingsInitialBalance" step="0.01" value="0">
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn-modal btn-cancel" id="closeSavingsModalBtn">Annuler</button>
-                <button type="submit" class="btn-modal btn-save">Enregistrer</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Modale pour opération sur compte épargne (ajouter/retirer) -->
-<div id="savingsOperationModal" class="modal-overlay">
-    <div class="modal-content">
-        <h3 id="operationModalTitle">Opération sur le compte</h3>
-        <form id="savingsOperationForm">
-            <input type="hidden" id="opAccountId">
-            <div class="form-group">
-                <label>Montant (€)</label>
-                <input type="number" id="opAmount" step="0.01" placeholder="0.00" required>
-            </div>
-            <div class="form-group">
-                <label>Type</label>
-                <select id="opType">
-                    <option value="credit">Crédit (+)</option>
-                    <option value="debit">Débit (-)</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Description (optionnelle)</label>
-                <input type="text" id="opDescription" placeholder="Ex: Virement mensuel">
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn-modal btn-cancel" id="closeOpModalBtn">Annuler</button>
-                <button type="submit" class="btn-modal btn-save">Effectuer</button>
-            </div>
-        </form>
-    </div>
-</div>
 
     <div class="transactions-header">
         <h2><i class="fas fa-list-ul"></i> Mouvements</h2>
@@ -188,9 +136,9 @@
     <div class="transaction-list" id="transactionListContainer">
         <div class="empty-list">Aucune transaction. Cliquez sur "Nouvelle transaction" ✨</div>
     </div>
-    <!-- Footer -->
-    <footer class="app-footer">
-      <p>BudgetFlow by GSTK • © GSTK – 2026</span> • Tous droits réservés</p>
+
+    <footer>
+        BudgetFlow by GSTK • © GSTK – 2026 • Tous droits réservés • <i class="fas fa-chart-simple"></i> Catégories personnalisées • Édition modale • Ordre modifiable par glissé • Solde initial configurable
     </footer>
 </div>
 
@@ -303,6 +251,94 @@
     </div>
 </div>
 
+<!-- MODALE compte épargne -->
+<div id="savingsModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="savingsModalTitle">Ajouter un compte épargne</h3>
+        <form id="savingsForm">
+            <div class="form-group">
+                <label>Nom du compte *</label>
+                <input type="text" id="savingsName" placeholder="Ex: Livret A, PEL, Cryptos..." required>
+            </div>
+            <div class="form-group">
+                <label>Solde initial (€)</label>
+                <input type="number" id="savingsInitialBalance" step="0.01" value="0">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-cancel" id="closeSavingsModalBtn">Annuler</button>
+                <button type="submit" class="btn-modal btn-save">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODALE opération épargne -->
+<div id="savingsOperationModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="operationModalTitle">Opération sur le compte</h3>
+        <form id="savingsOperationForm">
+            <input type="hidden" id="opAccountId">
+            <div class="form-group">
+                <label>Montant (€)</label>
+                <input type="number" id="opAmount" step="0.01" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+                <label>Type</label>
+                <select id="opType">
+                    <option value="credit">Crédit (+)</option>
+                    <option value="debit">Débit (-)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Description (optionnelle)</label>
+                <input type="text" id="opDescription" placeholder="Ex: Virement mensuel">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-cancel" id="closeOpModalBtn">Annuler</button>
+                <button type="submit" class="btn-modal btn-save">Effectuer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODALE historique épargne -->
+<div id="savingsHistoryModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 700px;">
+        <h3 id="historyModalTitle">Historique du compte</h3>
+        <div style="max-height: 400px; overflow-y: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border-light);">
+                        <th style="text-align: left; padding: 0.5rem;">Date</th>
+                        <th style="text-align: left; padding: 0.5rem;">Type</th>
+                        <th style="text-align: right; padding: 0.5rem;">Montant</th>
+                        <th style="text-align: left; padding: 0.5rem;">Description</th>
+                        <th style="text-align: center; padding: 0.5rem;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody"></tbody>
+            </table>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal btn-cancel" id="closeHistoryModalBtn">Fermer</button>
+            <button class="btn-modal btn-save" id="exportHistoryCsvBtn">Exporter CSV</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE confirmation suppression opération épargne -->
+<div id="deleteOperationModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 400px;">
+        <h3>Confirmer la suppression</h3>
+        <p>Êtes-vous sûr de vouloir supprimer cette opération ?</p>
+        <p>Le solde du compte sera automatiquement recalculé.</p>
+        <div class="modal-actions">
+            <button class="btn-modal btn-cancel" id="cancelDeleteOpBtn">Annuler</button>
+            <button class="btn-modal btn-save" id="confirmDeleteOpBtn">Supprimer</button>
+        </div>
+    </div>
+</div>
+
 <!-- Bouton retour en haut -->
 <button id="scrollTopBtn" class="scroll-top-btn" title="Retour en haut">
     <i class="fas fa-arrow-up"></i>
@@ -313,13 +349,13 @@
 <script src="comparaison.js"></script>
 <script src="app.js"></script>
 <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js')
-        .then(reg => console.log('Service Worker enregistré', reg))
-        .catch(err => console.log('Erreur service worker', err));
-    });
-  }
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js')
+                .then(reg => console.log('Service Worker enregistré', reg))
+                .catch(err => console.log('Erreur service worker', err));
+        });
+    }
 </script>
 </body>
 </html>
