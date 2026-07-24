@@ -1721,3 +1721,231 @@ body.dark-mode .scroll-top-btn:hover { background: var(--revenue-color); }
     background: #1e5a2e;
     transform: scale(1.02);
 }
+
+/* ===== COMPTES BANCAIRES ===== */
+.bank-view {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.bank-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.bank-header h3 {
+    color: var(--text-primary);
+}
+.btn-add-bank, .btn-bank {
+    background: #2c7a3e;
+    color: white;
+}
+.btn-add-bank:hover, .btn-bank:hover {
+    background: #1e5a2e;
+    transform: scale(1.02);
+}
+.bank-accounts-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.bank-account-card {
+    background: var(--card-bg);
+    border-radius: 1.5rem;
+    padding: 1.2rem;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--card-shadow);
+}
+.bank-account-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.8rem;
+}
+.bank-account-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+.bank-account-type {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    background: var(--category-bg);
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+}
+.bank-account-balance {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+.bank-account-balance.positive {
+    color: var(--revenue-color);
+}
+.bank-account-balance.negative {
+    color: var(--expense-color);
+}
+.bank-account-institution {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.bank-account-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+    flex-wrap: wrap;
+}
+.bank-account-actions button {
+    background: var(--btn-cancel-bg);
+    border: none;
+    padding: 0.3rem 0.8rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.bank-account-actions button:hover {
+    transform: scale(1.02);
+}
+.bank-account-actions .op-btn {
+    background: var(--category-bg);
+    color: var(--category-color);
+}
+.bank-account-actions .delete-btn {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+body.dark-mode .bank-account-actions .delete-btn {
+    background: #7f1a1a;
+    color: #fca5a5;
+}
+.bank-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--category-bg);
+    border-radius: 1rem;
+}
+.bank-stat {
+    text-align: center;
+}
+.bank-stat .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+.bank-stat .stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.empty-bank {
+    text-align: center;
+    padding: 2rem;
+    color: var(--empty-color);
+    font-style: italic;
+}
+
+/* ===== BOUTONS COMPTES BANCAIRES ===== */
+.btn-bank {
+    background: #2c7a3e;
+    color: white;
+    border: none;
+    padding: 0.6rem 0.9rem;
+    border-radius: 3rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+.btn-bank:hover {
+    background: #1e5a2e;
+    transform: scale(1.02);
+}
+
+.btn-add-bank {
+    background: #2c7a3e;
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 3rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+.btn-add-bank:hover {
+    background: #1e5a2e;
+    transform: scale(1.02);
+}
+
+/* Style pour le bouton "Nouveau compte" dans l'en-tête de la vue banque */
+.bank-header .btn-add-bank {
+    background: #2c7a3e;
+    color: white;
+}
+.bank-header .btn-add-bank:hover {
+    background: #1e5a2e;
+    transform: scale(1.02);
+}
+
+/* Boutons d'opération bancaire */
+.bank-account-actions .op-btn {
+    background: var(--category-bg);
+    color: var(--category-color);
+    border: 1px solid var(--border-light);
+    padding: 0.3rem 0.8rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.bank-account-actions .op-btn:hover {
+    background: var(--revenue-color);
+    color: white;
+    transform: scale(1.02);
+}
+
+.bank-account-actions .delete-bank {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: none;
+    padding: 0.3rem 0.8rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.bank-account-actions .delete-bank:hover {
+    background: #dc2626;
+    color: white;
+    transform: scale(1.02);
+}
+body.dark-mode .bank-account-actions .delete-bank {
+    background: #7f1a1a;
+    color: #fca5a5;
+}
+body.dark-mode .bank-account-actions .delete-bank:hover {
+    background: #dc2626;
+    color: white;
+}
