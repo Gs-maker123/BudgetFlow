@@ -15,35 +15,33 @@ let advancedFilters = { dateFrom: null, dateTo: null, category: null, type: null
 let pieChartInstance = null;
 let barChartInstance = null;
 
-// DOM elements - avec vérification de sécurité
-const safeGetElementById = (id) => {
-    const element = document.getElementById(id);
-    if (!element) console.warn(`Element with ID "${id}" not found`);
-    return element;
-};
+// Variables calendrier
+let calendarCurrentDate = new Date();
+let calendarSelectedDate = null;
 
-const listContainer = safeGetElementById('transactionListContainer');
-const totalBalanceSpan = safeGetElementById('totalBalance');
-const totalRevenueSpan = safeGetElementById('totalRevenue');
-const totalExpenseSpan = safeGetElementById('totalExpense');
-const openAddBtn = safeGetElementById('openAddModalBtn');
-const openSettingsBtn = safeGetElementById('openSettingsBtn');
-const modalOverlay = safeGetElementById('transactionModal');
-const settingsModal = safeGetElementById('settingsModal');
-const closeModalBtn = safeGetElementById('closeModalBtn');
-const closeSettingsBtn = safeGetElementById('closeSettingsBtn');
-const transactionForm = safeGetElementById('transactionForm');
-const settingsForm = safeGetElementById('settingsForm');
-const modalTitle = safeGetElementById('modalTitle');
-const descInput = safeGetElementById('descInput');
-const amountInput = safeGetElementById('amountInput');
-const categoryInput = safeGetElementById('categoryInput');
-const typeSelect = safeGetElementById('typeSelect');
-const dateInput = safeGetElementById('dateInput');
-const initialAmountInput = safeGetElementById('initialAmountInput');
-const currencySelect = safeGetElementById('currencySelect');
-const displayFormatSelect = safeGetElementById('displayFormatSelect');
-const initialHintSpan = safeGetElementById('initialHint');
+// DOM elements
+const listContainer = document.getElementById('transactionListContainer');
+const totalBalanceSpan = document.getElementById('totalBalance');
+const totalRevenueSpan = document.getElementById('totalRevenue');
+const totalExpenseSpan = document.getElementById('totalExpense');
+const openAddBtn = document.getElementById('openAddModalBtn');
+const openSettingsBtn = document.getElementById('openSettingsBtn');
+const modalOverlay = document.getElementById('transactionModal');
+const settingsModal = document.getElementById('settingsModal');
+const closeModalBtn = document.getElementById('closeModalBtn');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+const transactionForm = document.getElementById('transactionForm');
+const settingsForm = document.getElementById('settingsForm');
+const modalTitle = document.getElementById('modalTitle');
+const descInput = document.getElementById('descInput');
+const amountInput = document.getElementById('amountInput');
+const categoryInput = document.getElementById('categoryInput');
+const typeSelect = document.getElementById('typeSelect');
+const dateInput = document.getElementById('dateInput');
+const initialAmountInput = document.getElementById('initialAmountInput');
+const currencySelect = document.getElementById('currencySelect');
+const displayFormatSelect = document.getElementById('displayFormatSelect');
+const initialHintSpan = document.getElementById('initialHint');
 
 // ===== HELPERS =====
 function escapeHtml(str) {
@@ -684,26 +682,14 @@ function closeModal() {
 
 function handleFormSubmit(e) {
     e.preventDefault();
-    const description = descInput?.value.trim() || '';
-    const amount = parseFloat(amountInput?.value || 0);
-    const category = (categoryInput?.value.trim() || 'Divers');
-    const type = typeSelect?.value || 'expense';
-    let date = dateInput?.value || new Date().toISOString().slice(0, 10);
-    
-    // Validation robuste
-    if (!description) return alert('Description requise.');
-    if (!amount || amount <= 0) return alert('Montant doit être > 0.');
-    if (isNaN(amount)) return alert('Montant invalide.');
-    
+    const description = document.getElementById('descInput').value.trim();
+    const amount = parseFloat(document.getElementById('amountInput').value);
+    const category = document.getElementById('categoryInput').value.trim() || 'Divers';
+    const type = document.getElementById('typeSelect').value;
+    let date = document.getElementById('dateInput').value || new Date().toISOString().slice(0, 10);
+    if (!description || !amount || amount <= 0) return alert('Veuillez remplir tous les champs.');
     if (currentEditId === null) {
-        transactions.push({ 
-            id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6), 
-            description, 
-            amount, 
-            category, 
-            type, 
-            date 
-        });
+        transactions.push({ id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6), description, amount, category, type, date });
     } else {
         const idx = transactions.findIndex(t => t.id === currentEditId);
         if (idx !== -1) transactions[idx] = { ...transactions[idx], description, amount, category, type, date };
@@ -878,6 +864,175 @@ function renderDashboard() {
     }).join('');
 }
 
+// ===== CALENDRIER =====
+function renderCalendar() {
+    const year = calendarCurrentDate.getFullYear();
+    const month = calendarCurrentDate.getMonth();
+    
+    const monthName = new Date(year, month, 1).toLocaleString('fr-FR', { month: 'long', year: 'numeric' });
+    document.getElementById('calendarMonthYear').textContent = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+    
+    const daysOfWeek = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    let html = daysOfWeek.map(d => `<div class="calendar-day-header">${d}</div>`).join('');
+    
+    const firstDay = new Date(year, month, 1).getDay();
+    const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayStr = new Date().toISOString().slice(0, 10);
+    
+    for (let i = 0; i < startOffset; i++) {
+        html += `<div class="calendar-day empty"></div>`;
+    }
+    
+    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const dayTransactions = {};
+    const monthTx = transactions.filter(t => t.date && t.date.startsWith(monthKey));
+    monthTx.forEach(t => {
+        if (!dayTransactions[t.date]) dayTransactions[t.date] = [];
+        dayTransactions[t.date].push(t);
+    });
+    
+    const sortedTx = [...monthTx].sort((a, b) => a.date.localeCompare(b.date));
+    let cumulative = appSettings.initialAmount || 0;
+    const prevMonth = new Date(year, month, 0);
+    const prevMonthKey = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`;
+    const prevMonthTx = transactions.filter(t => t.date && t.date.startsWith(prevMonthKey));
+    prevMonthTx.forEach(t => {
+        if (t.type === 'revenue') cumulative += t.amount;
+        else cumulative -= t.amount;
+    });
+    
+    const dailyBalances = {};
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const tx = dayTransactions[dateStr] || [];
+        tx.forEach(t => {
+            if (t.type === 'revenue') cumulative += t.amount;
+            else cumulative -= t.amount;
+        });
+        dailyBalances[dateStr] = cumulative;
+    }
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const tx = dayTransactions[dateStr] || [];
+        const balance = dailyBalances[dateStr] || 0;
+        const isToday = dateStr === todayStr;
+        const isSelected = dateStr === calendarSelectedDate;
+        
+        let classes = 'calendar-day';
+        if (tx.length > 0) classes += ' has-transaction';
+        if (tx.some(t => t.type === 'revenue')) classes += ' has-revenue';
+        if (tx.some(t => t.type === 'expense')) classes += ' has-expense';
+        if (isToday) classes += ' today';
+        if (isSelected) classes += ' selected';
+        
+        const balanceClass = balance >= 0 ? 'positive' : 'negative';
+        const balanceDisplay = `${balance >= 0 ? '+' : ''}${balance.toFixed(0)}`;
+        
+        html += `
+            <div class="${classes}" data-date="${dateStr}">
+                <span class="day-number">${d}</span>
+                ${tx.length > 0 ? `<span class="day-balance ${balanceClass}">${balanceDisplay}</span>` : ''}
+            </div>
+        `;
+    }
+    
+    document.getElementById('calendarGrid').innerHTML = html;
+    
+    document.querySelectorAll('.calendar-day:not(.empty)').forEach(el => {
+        el.addEventListener('click', () => {
+            const date = el.dataset.date;
+            calendarSelectedDate = date;
+            renderCalendar();
+            renderDayDetail(date);
+        });
+    });
+    
+    if (!calendarSelectedDate) {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        if (document.querySelector(`.calendar-day[data-date="${todayStr}"]`)) {
+            calendarSelectedDate = todayStr;
+        } else {
+            const firstTx = document.querySelector('.calendar-day.has-transaction');
+            if (firstTx) calendarSelectedDate = firstTx.dataset.date;
+        }
+        if (calendarSelectedDate) {
+            renderCalendar();
+            renderDayDetail(calendarSelectedDate);
+        }
+    } else {
+        renderDayDetail(calendarSelectedDate);
+    }
+}
+
+function renderDayDetail(date) {
+    const title = document.getElementById('calendarDayTitle');
+    const container = document.getElementById('calendarDayTransactions');
+    
+    if (!date) {
+        title.textContent = 'Sélectionnez un jour';
+        container.innerHTML = '<div class="empty-detail">Cliquez sur un jour pour voir les transactions</div>';
+        return;
+    }
+    
+    const tx = transactions.filter(t => t.date === date);
+    const dateObj = new Date(date + 'T00:00:00');
+    const formattedDate = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    title.textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+    
+    if (tx.length === 0) {
+        container.innerHTML = '<div class="empty-detail">Aucune transaction ce jour</div>';
+        return;
+    }
+    
+    let totalRev = 0, totalExp = 0;
+    let html = '';
+    tx.forEach(t => {
+        if (t.type === 'revenue') totalRev += t.amount;
+        else totalExp += t.amount;
+        const amountClass = t.type === 'revenue' ? 'positive' : 'negative';
+        html += `
+            <div class="day-transaction-item">
+                <span class="tx-desc">${escapeHtml(t.description)}</span>
+                <span class="tx-cat">${escapeHtml(t.category || 'Non catégorisé')}</span>
+                <span class="tx-amount ${amountClass}">${t.type === 'revenue' ? '+' : '-'} ${t.amount.toFixed(2)} ${appSettings.currency}</span>
+            </div>
+        `;
+    });
+    
+    const net = totalRev - totalExp;
+    const netClass = net >= 0 ? 'positive' : 'negative';
+    html += `
+        <div style="display:flex; justify-content:space-between; padding:0.5rem 0.5rem 0; border-top:2px solid var(--border-light); margin-top:0.3rem; font-weight:600;">
+            <span>Total</span>
+            <span class="${netClass}">${net >= 0 ? '+' : ''}${net.toFixed(2)} ${appSettings.currency}</span>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+function initCalendar() {
+    document.getElementById('calendarPrevBtn').addEventListener('click', () => {
+        calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() - 1);
+        calendarSelectedDate = null;
+        renderCalendar();
+    });
+    document.getElementById('calendarNextBtn').addEventListener('click', () => {
+        calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() + 1);
+        calendarSelectedDate = null;
+        renderCalendar();
+    });
+    document.getElementById('calendarTodayBtn').addEventListener('click', () => {
+        calendarCurrentDate = new Date();
+        calendarSelectedDate = new Date().toISOString().slice(0, 10);
+        renderCalendar();
+    });
+    
+    renderCalendar();
+}
+
 // ===== DUPLICATION MOIS =====
 function openDuplicateModal() {
     const today = new Date();
@@ -953,6 +1108,7 @@ function fullRefresh() {
     renderCategorySummary();
     renderBudgets();
     renderCharts();
+    renderCalendar();
     updateMonthSelect();
     updateCategoryFilter();
     saveToLocalStorage();
@@ -962,256 +1118,169 @@ function fullRefresh() {
 
 // ===== INIT =====
 function init() {
-    try {
-        loadTheme();
-        loadThemeColor();
-        loadSettings();
-        loadInitialData();
-        loadBudgets();
-        loadSavingsAccounts();
-        loadSortMode();
-        applySorting();
+    loadTheme();
+    loadThemeColor();
+    loadSettings();
+    loadInitialData();
+    loadBudgets();
+    loadSavingsAccounts();
+    loadSortMode();
+    applySorting();
+    fullRefresh();
+    renderSavingsAccounts();
+    renderDashboard();
+    initMonthFilter();
+    initQuickActionBar();
+    initCalendar();
+    initSortControls();
+
+    // Événements
+    openAddBtn.addEventListener('click', openAddModal);
+    openSettingsBtn.addEventListener('click', () => document.getElementById('settingsModal').classList.add('active'));
+    closeModalBtn.addEventListener('click', closeModal);
+    closeSettingsBtn.addEventListener('click', () => document.getElementById('settingsModal').classList.remove('active'));
+    document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+    document.getElementById('themeSelectorBtn').addEventListener('click', () => document.getElementById('themeModal').classList.add('active'));
+    document.getElementById('closeThemeModalBtn').addEventListener('click', () => document.getElementById('themeModal').classList.remove('active'));
+    document.querySelectorAll('.theme-option').forEach(el => {
+        el.addEventListener('click', () => { applyThemeColor(el.dataset.theme); document.getElementById('themeModal').classList.remove('active'); });
+    });
+    modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+    settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) document.getElementById('settingsModal').classList.remove('active'); });
+    transactionForm.addEventListener('submit', handleFormSubmit);
+    settingsForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        appSettings.initialAmount = parseFloat(initialAmountInput.value) || 0;
+        appSettings.currency = currencySelect.value;
+        appSettings.displayFormat = displayFormatSelect.value;
+        saveSettingsToLocalStorage();
+        updateInitialHintDisplay();
         fullRefresh();
+        document.getElementById('settingsModal').classList.remove('active');
+    });
+
+    // Budget
+    document.getElementById('addBudgetBtn').addEventListener('click', () => {
+        document.getElementById('budgetModalTitle').textContent = 'Définir un budget';
+        document.getElementById('budgetCategory').value = '';
+        document.getElementById('budgetAmount').value = '';
+        document.getElementById('budgetModal').classList.add('active');
+    });
+    document.getElementById('closeBudgetModalBtn').addEventListener('click', () => document.getElementById('budgetModal').classList.remove('active'));
+    document.getElementById('budgetForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const cat = document.getElementById('budgetCategory').value.trim();
+        const amount = parseFloat(document.getElementById('budgetAmount').value);
+        if (!cat || !amount || amount <= 0) return alert('Veuillez remplir tous les champs.');
+        const existing = budgets.find(b => b.category === cat);
+        if (existing) existing.amount = amount;
+        else budgets.push({ category: cat, amount });
+        saveBudgets();
+        renderBudgets();
+        document.getElementById('budgetModal').classList.remove('active');
+    });
+
+    // Épargne
+    document.getElementById('openSavingsBtn').addEventListener('click', () => {
+        const view = document.getElementById('savingsView');
+        view.style.display = view.style.display === 'none' ? 'block' : 'none';
+        if (view.style.display === 'block') { renderSavingsAccounts(); renderDashboard(); }
+    });
+    document.getElementById('addSavingsAccountBtn').addEventListener('click', () => document.getElementById('savingsModal').classList.add('active'));
+    document.getElementById('closeSavingsModalBtn').addEventListener('click', () => document.getElementById('savingsModal').classList.remove('active'));
+    document.getElementById('savingsForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('savingsName').value.trim();
+        const balance = parseFloat(document.getElementById('savingsInitialBalance').value) || 0;
+        if (!name) return alert('Donnez un nom.');
+        savingsAccounts.push({ id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6), name, balance, history: [] });
+        saveSavingsAccounts();
         renderSavingsAccounts();
-        renderDashboard();
-        initMonthFilter();
-        initQuickActionBar();
-        initSortControls();
+        document.getElementById('savingsModal').classList.remove('active');
+    });
+    document.getElementById('closeOpModalBtn').addEventListener('click', () => document.getElementById('savingsOperationModal').classList.remove('active'));
+    document.getElementById('savingsOperationForm').addEventListener('submit', handleSavingsOperationSubmit);
+    document.getElementById('savingsModal').addEventListener('click', (e) => { if (e.target === document.getElementById('savingsModal')) document.getElementById('savingsModal').classList.remove('active'); });
+    document.getElementById('savingsOperationModal').addEventListener('click', (e) => { if (e.target === document.getElementById('savingsOperationModal')) document.getElementById('savingsOperationModal').classList.remove('active'); });
 
-        // Événements - avec vérifications de sécurité
-        if (openAddBtn) openAddBtn.addEventListener('click', openAddModal);
-        if (openSettingsBtn) openSettingsBtn.addEventListener('click', () => safeGetElementById('settingsModal')?.classList.add('active'));
-        if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
-        if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => safeGetElementById('settingsModal')?.classList.remove('active'));
-        
-        const themeToggleBtn = safeGetElementById('themeToggleBtn');
-        if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
-        
-        const themeSelectorBtn = safeGetElementById('themeSelectorBtn');
-        if (themeSelectorBtn) themeSelectorBtn.addEventListener('click', () => safeGetElementById('themeModal')?.classList.add('active'));
-        
-        const closeThemeModalBtn = safeGetElementById('closeThemeModalBtn');
-        if (closeThemeModalBtn) closeThemeModalBtn.addEventListener('click', () => safeGetElementById('themeModal')?.classList.remove('active'));
-        
-        const themeOptions = document.querySelectorAll('.theme-option');
-        themeOptions.forEach(el => {
-            el.addEventListener('click', () => {
-                applyThemeColor(el.dataset.theme);
-                safeGetElementById('themeModal')?.classList.remove('active');
-            });
-        });
-        
-        if (modalOverlay) modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
-        if (settingsModal) settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) safeGetElementById('settingsModal')?.classList.remove('active'); });
-        if (transactionForm) transactionForm.addEventListener('submit', handleFormSubmit);
-        if (settingsForm) settingsForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (initialAmountInput) appSettings.initialAmount = parseFloat(initialAmountInput.value) || 0;
-            if (currencySelect) appSettings.currency = currencySelect.value;
-            if (displayFormatSelect) appSettings.displayFormat = displayFormatSelect.value;
-            saveSettingsToLocalStorage();
-            updateInitialHintDisplay();
-            fullRefresh();
-            safeGetElementById('settingsModal')?.classList.remove('active');
-        });
+    // Historique épargne
+    document.getElementById('closeHistoryModalBtn').addEventListener('click', () => document.getElementById('savingsHistoryModal').classList.remove('active'));
+    document.getElementById('exportHistoryCsvBtn').addEventListener('click', () => {
+        const acc = savingsAccounts.find(a => a.id === currentHistoryAccountId);
+        if (!acc || !acc.history?.length) return alert('Aucune donnée.');
+        let csv = 'Date;Type;Montant;Description\n';
+        acc.history.forEach(op => { csv += `${formatDate(op.date)};${op.type === 'credit' ? 'Crédit' : 'Débit'};${op.amount};"${op.description || ''}"\n`; });
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `historique_${acc.name}.csv`;
+        link.click();
+    });
+    document.getElementById('savingsHistoryModal').addEventListener('click', (e) => { if (e.target === document.getElementById('savingsHistoryModal')) document.getElementById('savingsHistoryModal').classList.remove('active'); });
+    document.getElementById('cancelDeleteOpBtn').addEventListener('click', () => document.getElementById('deleteOperationModal').classList.remove('active'));
+    document.getElementById('confirmDeleteOpBtn').addEventListener('click', () => {
+        if (currentOperationToDelete) {
+            deleteOperationFromHistory(currentOperationToDelete.accountId, currentOperationToDelete.opId);
+            currentOperationToDelete = null;
+            document.getElementById('deleteOperationModal').classList.remove('active');
+            if (document.getElementById('savingsHistoryModal').classList.contains('active')) showHistoryModal(currentHistoryAccountId);
+        }
+    });
+    document.getElementById('deleteOperationModal').addEventListener('click', (e) => { if (e.target === document.getElementById('deleteOperationModal')) document.getElementById('deleteOperationModal').classList.remove('active'); });
 
-        // Budget
-        const addBudgetBtn = safeGetElementById('addBudgetBtn');
-        if (addBudgetBtn) addBudgetBtn.addEventListener('click', () => {
-            const budgetModalTitle = safeGetElementById('budgetModalTitle');
-            if (budgetModalTitle) budgetModalTitle.textContent = 'Définir un budget';
-            const budgetCategory = safeGetElementById('budgetCategory');
-            if (budgetCategory) budgetCategory.value = '';
-            const budgetAmount = safeGetElementById('budgetAmount');
-            if (budgetAmount) budgetAmount.value = '';
-            safeGetElementById('budgetModal')?.classList.add('active');
-        });
-        
-        const closeBudgetModalBtn = safeGetElementById('closeBudgetModalBtn');
-        if (closeBudgetModalBtn) closeBudgetModalBtn.addEventListener('click', () => safeGetElementById('budgetModal')?.classList.remove('active'));
-        
-        const budgetForm = safeGetElementById('budgetForm');
-        if (budgetForm) budgetForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const budgetCategory = safeGetElementById('budgetCategory');
-            const budgetAmount = safeGetElementById('budgetAmount');
-            const cat = budgetCategory?.value.trim() || '';
-            const amount = parseFloat(budgetAmount?.value || 0);
-            if (!cat || !amount || amount <= 0) return alert('Veuillez remplir tous les champs.');
-            const existing = budgets.find(b => b.category === cat);
-            if (existing) existing.amount = amount;
-            else budgets.push({ category: cat, amount });
-            saveBudgets();
-            renderBudgets();
-            safeGetElementById('budgetModal')?.classList.remove('active');
-        });
+    // Duplication
+    document.getElementById('openDuplicateBtn').addEventListener('click', openDuplicateModal);
+    document.getElementById('closeDuplicateModalBtn').addEventListener('click', () => document.getElementById('duplicateModal').classList.remove('active'));
+    document.getElementById('duplicateForm').addEventListener('submit', handleDuplicateSubmit);
+    document.getElementById('duplicateModal').addEventListener('click', (e) => { if (e.target === document.getElementById('duplicateModal')) document.getElementById('duplicateModal').classList.remove('active'); });
 
-        // Épargne
-        const openSavingsBtn = safeGetElementById('openSavingsBtn');
-        if (openSavingsBtn) openSavingsBtn.addEventListener('click', () => {
-            const savingsView = safeGetElementById('savingsView');
-            if (savingsView) {
-                savingsView.style.display = savingsView.style.display === 'none' ? 'block' : 'none';
-                if (savingsView.style.display === 'block') { renderSavingsAccounts(); renderDashboard(); }
-            }
-        });
-        
-        const addSavingsAccountBtn = safeGetElementById('addSavingsAccountBtn');
-        if (addSavingsAccountBtn) addSavingsAccountBtn.addEventListener('click', () => safeGetElementById('savingsModal')?.classList.add('active'));
-        
-        const closeSavingsModalBtn = safeGetElementById('closeSavingsModalBtn');
-        if (closeSavingsModalBtn) closeSavingsModalBtn.addEventListener('click', () => safeGetElementById('savingsModal')?.classList.remove('active'));
-        
-        const savingsForm = safeGetElementById('savingsForm');
-        if (savingsForm) savingsForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const savingsName = safeGetElementById('savingsName');
-            const savingsInitialBalance = safeGetElementById('savingsInitialBalance');
-            const name = savingsName?.value.trim() || '';
-            const balance = parseFloat(savingsInitialBalance?.value || 0);
-            if (!name) return alert('Donnez un nom.');
-            savingsAccounts.push({ id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6), name, balance, history: [] });
-            saveSavingsAccounts();
-            renderSavingsAccounts();
-            safeGetElementById('savingsModal')?.classList.remove('active');
-        });
-        
-        const closeOpModalBtn = safeGetElementById('closeOpModalBtn');
-        if (closeOpModalBtn) closeOpModalBtn.addEventListener('click', () => safeGetElementById('savingsOperationModal')?.classList.remove('active'));
-        
-        const savingsOperationForm = safeGetElementById('savingsOperationForm');
-        if (savingsOperationForm) savingsOperationForm.addEventListener('submit', handleSavingsOperationSubmit);
-        
-        const savingsModal = safeGetElementById('savingsModal');
-        if (savingsModal) savingsModal.addEventListener('click', (e) => { if (e.target === savingsModal) safeGetElementById('savingsModal')?.classList.remove('active'); });
-        
-        const savingsOperationModal = safeGetElementById('savingsOperationModal');
-        if (savingsOperationModal) savingsOperationModal.addEventListener('click', (e) => { if (e.target === savingsOperationModal) safeGetElementById('savingsOperationModal')?.classList.remove('active'); });
+    // Export/Import
+    document.getElementById('exportDataBtn').addEventListener('click', exportData);
+    document.getElementById('importDataBtn').addEventListener('click', () => document.getElementById('importModal').classList.add('active'));
+    document.getElementById('closeImportModalBtn').addEventListener('click', () => document.getElementById('importModal').classList.remove('active'));
+    document.getElementById('confirmImportBtn').addEventListener('click', () => {
+        const file = document.getElementById('importFileInput').files[0];
+        if (file) importData(file);
+        else alert('Sélectionnez un fichier.');
+        document.getElementById('importModal').classList.remove('active');
+    });
+    document.getElementById('importModal').addEventListener('click', (e) => { if (e.target === document.getElementById('importModal')) document.getElementById('importModal').classList.remove('active'); });
 
-        // Historique épargne
-        const closeHistoryModalBtn = safeGetElementById('closeHistoryModalBtn');
-        if (closeHistoryModalBtn) closeHistoryModalBtn.addEventListener('click', () => safeGetElementById('savingsHistoryModal')?.classList.remove('active'));
-        
-        const exportHistoryCsvBtn = safeGetElementById('exportHistoryCsvBtn');
-        if (exportHistoryCsvBtn) exportHistoryCsvBtn.addEventListener('click', () => {
-            const acc = savingsAccounts.find(a => a.id === currentHistoryAccountId);
-            if (!acc || !acc.history?.length) return alert('Aucune donnée.');
-            let csv = 'Date;Type;Montant;Description\n';
-            acc.history.forEach(op => { csv += `${formatDate(op.date)};${op.type === 'credit' ? 'Crédit' : 'Débit'};${op.amount};"${op.description || ''}"\n`; });
-            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `historique_${acc.name}.csv`;
-            link.click();
-        });
-        
-        const savingsHistoryModal = safeGetElementById('savingsHistoryModal');
-        if (savingsHistoryModal) savingsHistoryModal.addEventListener('click', (e) => { if (e.target === savingsHistoryModal) safeGetElementById('savingsHistoryModal')?.classList.remove('active'); });
-        
-        const cancelDeleteOpBtn = safeGetElementById('cancelDeleteOpBtn');
-        if (cancelDeleteOpBtn) cancelDeleteOpBtn.addEventListener('click', () => safeGetElementById('deleteOperationModal')?.classList.remove('active'));
-        
-        const confirmDeleteOpBtn = safeGetElementById('confirmDeleteOpBtn');
-        if (confirmDeleteOpBtn) confirmDeleteOpBtn.addEventListener('click', () => {
-            if (currentOperationToDelete) {
-                deleteOperationFromHistory(currentOperationToDelete.accountId, currentOperationToDelete.opId);
-                currentOperationToDelete = null;
-                safeGetElementById('deleteOperationModal')?.classList.remove('active');
-                if (safeGetElementById('savingsHistoryModal')?.classList.contains('active')) showHistoryModal(currentHistoryAccountId);
-            }
-        });
-        
-        const deleteOperationModal = safeGetElementById('deleteOperationModal');
-        if (deleteOperationModal) deleteOperationModal.addEventListener('click', (e) => { if (e.target === deleteOperationModal) safeGetElementById('deleteOperationModal')?.classList.remove('active'); });
+    // PDF
+    document.getElementById('exportPdfBtn').addEventListener('click', exportToPDF);
+    document.getElementById('exportMonthlyPdfBtn').addEventListener('click', () => {
+        if (typeof exportMonthlyToPDF !== 'undefined') exportMonthlyToPDF();
+        else alert('Fonction non disponible.');
+    });
 
-        // Duplication
-        const openDuplicateBtn = safeGetElementById('openDuplicateBtn');
-        if (openDuplicateBtn) openDuplicateBtn.addEventListener('click', openDuplicateModal);
-        
-        const closeDuplicateModalBtn = safeGetElementById('closeDuplicateModalBtn');
-        if (closeDuplicateModalBtn) closeDuplicateModalBtn.addEventListener('click', () => safeGetElementById('duplicateModal')?.classList.remove('active'));
-        
-        const duplicateForm = safeGetElementById('duplicateForm');
-        if (duplicateForm) duplicateForm.addEventListener('submit', handleDuplicateSubmit);
-        
-        const duplicateModal = safeGetElementById('duplicateModal');
-        if (duplicateModal) duplicateModal.addEventListener('click', (e) => { if (e.target === duplicateModal) safeGetElementById('duplicateModal')?.classList.remove('active'); });
+    // Vue mensuelle
+    document.getElementById('openMonthlyBtn').addEventListener('click', () => {
+        const view = document.getElementById('monthlyView');
+        view.style.display = view.style.display === 'none' ? 'block' : 'none';
+        if (view.style.display === 'block' && typeof renderMonthlyTable !== 'undefined') renderMonthlyTable();
+    });
 
-        // Export/Import
-        const exportDataBtn = safeGetElementById('exportDataBtn');
-        if (exportDataBtn) exportDataBtn.addEventListener('click', exportData);
-        
-        const importDataBtn = safeGetElementById('importDataBtn');
-        if (importDataBtn) importDataBtn.addEventListener('click', () => safeGetElementById('importModal')?.classList.add('active'));
-        
-        const closeImportModalBtn = safeGetElementById('closeImportModalBtn');
-        if (closeImportModalBtn) closeImportModalBtn.addEventListener('click', () => safeGetElementById('importModal')?.classList.remove('active'));
-        
-        const confirmImportBtn = safeGetElementById('confirmImportBtn');
-        if (confirmImportBtn) confirmImportBtn.addEventListener('click', () => {
-            const importFileInput = safeGetElementById('importFileInput');
-            const file = importFileInput?.files[0];
-            if (file) importData(file);
-            else alert('Sélectionnez un fichier.');
-            safeGetElementById('importModal')?.classList.remove('active');
-        });
-        
-        const importModal = safeGetElementById('importModal');
-        if (importModal) importModal.addEventListener('click', (e) => { if (e.target === importModal) safeGetElementById('importModal')?.classList.remove('active'); });
+    // Filtres avancés
+    document.getElementById('applyFiltersBtn').addEventListener('click', applyAdvancedFilters);
+    document.getElementById('resetFiltersBtn').addEventListener('click', resetAdvancedFilters);
 
-        // PDF
-        const exportPdfBtn = safeGetElementById('exportPdfBtn');
-        if (exportPdfBtn) exportPdfBtn.addEventListener('click', exportToPDF);
-        
-        const exportMonthlyPdfBtn = safeGetElementById('exportMonthlyPdfBtn');
-        if (exportMonthlyPdfBtn) exportMonthlyPdfBtn.addEventListener('click', () => {
-            if (typeof exportMonthlyToPDF !== 'undefined') exportMonthlyToPDF();
-            else alert('Fonction non disponible.');
-        });
+    // Refresh dashboard
+    document.getElementById('refreshDashboardBtn').addEventListener('click', () => { renderDashboard(); });
 
-        // Vue mensuelle
-        const openMonthlyBtn = safeGetElementById('openMonthlyBtn');
-        if (openMonthlyBtn) openMonthlyBtn.addEventListener('click', () => {
-            const monthlyView = safeGetElementById('monthlyView');
-            if (monthlyView) {
-                monthlyView.style.display = monthlyView.style.display === 'none' ? 'block' : 'none';
-                if (monthlyView.style.display === 'block' && typeof renderMonthlyTable !== 'undefined') renderMonthlyTable();
-            }
-        });
-
-        // Filtres avancés
-        const applyFiltersBtn = safeGetElementById('applyFiltersBtn');
-        if (applyFiltersBtn) applyFiltersBtn.addEventListener('click', applyAdvancedFilters);
-        
-        const resetFiltersBtn = safeGetElementById('resetFiltersBtn');
-        if (resetFiltersBtn) resetFiltersBtn.addEventListener('click', resetAdvancedFilters);
-
-        // Refresh dashboard
-        const refreshDashboardBtn = safeGetElementById('refreshDashboardBtn');
-        if (refreshDashboardBtn) refreshDashboardBtn.addEventListener('click', () => { renderDashboard(); });
-
-        // Scroll top
-        const scrollTopBtn = safeGetElementById('scrollTopBtn');
-        if (scrollTopBtn) scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-        window.addEventListener('scroll', () => {
-            if (scrollTopBtn) scrollTopBtn.style.display = window.scrollY > 300 ? 'flex' : 'none';
-        });
-    } catch (error) {
-        console.error('Erreur lors de l\'initialisation :', error);
-        alert('Une erreur s\'est produite lors du chargement. Veuillez rafraîchir la page.');
-    }
+    // Scroll top
+    document.getElementById('scrollTopBtn').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    window.addEventListener('scroll', () => {
+        document.getElementById('scrollTopBtn').style.display = window.scrollY > 300 ? 'flex' : 'none';
+    });
 }
 
 function initSortControls() {
-    const sortSelect = safeGetElementById('sortSelect');
-    if (sortSelect) {
-        sortSelect.addEventListener('change', (e) => {
-            currentSortMode = e.target.value;
-            saveSortMode();
-            if (currentSortMode !== 'manual') applySorting();
-            fullRefresh();
-        });
-    }
+    document.getElementById('sortSelect').addEventListener('change', (e) => {
+        currentSortMode = e.target.value;
+        saveSortMode();
+        if (currentSortMode !== 'manual') applySorting();
+        fullRefresh();
+    });
 }
 
 init();
