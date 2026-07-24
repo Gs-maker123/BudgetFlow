@@ -1202,3 +1202,120 @@ body.dark-mode .scroll-top-btn:hover { background: var(--revenue-color); }
         min-width: 90px;
     }
 }
+
+/* ===== STATS ÉPARGNE ===== */
+.savings-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-light);
+}
+.savings-stat {
+    text-align: center;
+    padding: 0.5rem;
+    background: var(--category-bg);
+    border-radius: 0.8rem;
+}
+.savings-stat .stat-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+.savings-stat .stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.savings-stat .stat-value.positive {
+    color: var(--revenue-color);
+}
+.savings-stat .stat-value.negative {
+    color: var(--expense-color);
+}
+
+/* ===== OBJECTIF D'ÉPARGNE ===== */
+.goal-progress {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: var(--card-bg);
+    border-radius: 0.6rem;
+    border: 1px solid var(--border-light);
+}
+.goal-progress .goal-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+.goal-progress .goal-bar {
+    height: 6px;
+    background: var(--border-light);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0.3rem 0;
+}
+.goal-progress .goal-bar .fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+.goal-progress .goal-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+}
+.goal-progress .goal-details .goal-amount {
+    font-weight: 600;
+}
+.goal-progress .goal-details .goal-amount.achieved {
+    color: var(--revenue-color);
+}
+.goal-progress .goal-details .goal-amount.not-achieved {
+    color: var(--expense-color);
+}
+.goal-progress .goal-deadline {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+}
+.goal-progress .goal-interest {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    margin-top: 0.2rem;
+}
+.goal-progress .goal-remove {
+    background: none;
+    border: none;
+    color: var(--expense-color);
+    cursor: pointer;
+    font-size: 0.7rem;
+    padding: 0 0.3rem;
+}
+.goal-progress .goal-remove:hover {
+    text-decoration: underline;
+}
+
+/* ===== TRANSFER ===== */
+.transfer-btn {
+    background: var(--category-bg);
+    color: var(--text-primary);
+    border: none;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: 0.2s;
+}
+.transfer-btn:hover {
+    background: var(--revenue-color);
+    color: white;
+}
+
+@media (max-width: 600px) {
+    .savings-stats {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+}
