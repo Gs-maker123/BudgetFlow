@@ -1319,3 +1319,113 @@ body.dark-mode .scroll-top-btn:hover { background: var(--revenue-color); }
         gap: 0.5rem;
     }
 }
+
+/* ===== RÉCURRENTES ===== */
+.recurring-view {
+    margin: 1.5rem 0;
+}
+.recurring-wrapper {
+    background: var(--card-bg);
+    border-radius: 1.5rem;
+    padding: 1.2rem 1.5rem;
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--border-light);
+}
+.recurring-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.recurring-header h3 {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+.recurring-count {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    background: var(--category-bg);
+    padding: 0.2rem 0.8rem;
+    border-radius: 2rem;
+}
+.recurring-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.recurring-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    background: var(--category-bg);
+    border-radius: 0.8rem;
+    border: 1px solid var(--border-light);
+}
+.recurring-item .recurring-desc {
+    font-weight: 500;
+    color: var(--text-primary);
+    flex: 1;
+}
+.recurring-item .recurring-amount {
+    font-weight: 600;
+    margin: 0 1rem;
+}
+.recurring-item .recurring-amount.positive {
+    color: var(--revenue-color);
+}
+.recurring-item .recurring-amount.negative {
+    color: var(--expense-color);
+}
+.recurring-item .recurring-category {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    background: var(--card-bg);
+    padding: 0.1rem 0.6rem;
+    border-radius: 1rem;
+    margin: 0 0.5rem;
+}
+.recurring-item .recurring-date {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin: 0 0.5rem;
+}
+.recurring-item .recurring-toggle {
+    background: none;
+    border: none;
+    color: var(--expense-color);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0 0.3rem;
+    opacity: 0.6;
+    transition: 0.2s;
+}
+.recurring-item .recurring-toggle:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+.recurring-badge {
+    font-size: 0.6rem;
+    background: var(--revenue-color);
+    color: white;
+    padding: 0.1rem 0.4rem;
+    border-radius: 1rem;
+    margin-left: 0.3rem;
+}
+.btn-recurring {
+    background: #475569;
+    color: white;
+}
+.btn-recurring:hover {
+    background: #334155;
+    transform: scale(1.02);
+}
+
+/* Indicateur dans la liste des transactions */
+.transaction-item .recurring-indicator {
+    font-size: 0.7rem;
+    color: var(--revenue-color);
+    margin-left: 0.3rem;
+}
