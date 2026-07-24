@@ -38,6 +38,7 @@ const amountInput = document.getElementById('amountInput');
 const categoryInput = document.getElementById('categoryInput');
 const typeSelect = document.getElementById('typeSelect');
 const dateInput = document.getElementById('dateInput');
+const recurringCheckbox = document.getElementById('recurringCheckbox');
 const initialAmountInput = document.getElementById('initialAmountInput');
 const currencySelect = document.getElementById('currencySelect');
 const displayFormatSelect = document.getElementById('displayFormatSelect');
@@ -158,16 +159,17 @@ function loadInitialData() {
         transactions = JSON.parse(stored);
     } else {
         transactions = [
-            { id: '1', description: 'Salaire NET', amount: 2450, category: 'Salaire', type: 'revenue', date: '2025-03-01' },
-            { id: '2', description: 'Courses supermarché', amount: 89.5, category: 'Alimentation', type: 'expense', date: '2025-03-05' },
-            { id: '3', description: 'Netflix', amount: 25.99, category: 'Abonnements', type: 'expense', date: '2025-03-10' },
-            { id: '4', description: 'Transport essence', amount: 45.2, category: 'Transport', type: 'expense', date: '2025-02-15' },
-            { id: '5', description: 'Freelance design', amount: 380, category: 'Freelance', type: 'revenue', date: '2025-02-20' },
-            { id: '6', description: 'Restaurant', amount: 37.4, category: 'Loisirs', type: 'expense', date: '2025-01-25' }
+            { id: '1', description: 'Salaire NET', amount: 2450, category: 'Salaire', type: 'revenue', date: '2025-03-01', recurring: true },
+            { id: '2', description: 'Courses supermarché', amount: 89.5, category: 'Alimentation', type: 'expense', date: '2025-03-05', recurring: false },
+            { id: '3', description: 'Netflix', amount: 25.99, category: 'Abonnements', type: 'expense', date: '2025-03-10', recurring: true },
+            { id: '4', description: 'Transport essence', amount: 45.2, category: 'Transport', type: 'expense', date: '2025-02-15', recurring: false },
+            { id: '5', description: 'Freelance design', amount: 380, category: 'Freelance', type: 'revenue', date: '2025-02-20', recurring: false },
+            { id: '6', description: 'Restaurant', amount: 37.4, category: 'Loisirs', type: 'expense', date: '2025-01-25', recurring: false }
         ];
     }
     transactions = transactions.map(t => {
         if (!t.date) t.date = new Date().toISOString().slice(0, 10);
+        if (t.recurring === undefined) t.recurring = false;
         return t;
     });
     saveToLocalStorage();
@@ -555,11 +557,12 @@ function renderTransactionList() {
     let html = '';
     filtered.forEach(t => {
         const amountClass = t.type === 'expense' ? 'amount-expense' : 'amount-revenue';
+        const recurringBadge = t.recurring ? '<span class="recurring-badge">🔄</span>' : '';
         html += `
             <div class="transaction-item" data-id="${t.id}">
                 <div class="drag-area ${currentSortMode !== 'manual' ? 'disabled' : ''}"><i class="fas fa-grip-vertical"></i></div>
                 <div class="transaction-info">
-                    <span class="transaction-desc">${escapeHtml(t.description)}</span>
+                    <span class="transaction-desc">${escapeHtml(t.description)} ${recurringBadge}</span>
                     <span class="transaction-category">${escapeHtml(t.category || 'Non catégorisé')}</span>
                     <span class="transaction-amount ${amountClass}">${formatAmountWithSettings(t.amount, t.type)}</span>
                     <span class="transaction-date">${t.date || ''}</span>
@@ -604,7 +607,8 @@ function duplicateTransactionById(id) {
         amount: original.amount,
         category: original.category,
         type: original.type,
-        date: new Date().toISOString().slice(0, 10)
+        date: new Date().toISOString().slice(0, 10),
+        recurring: original.recurring || false
     };
     transactions.push(newT);
     fullRefresh();
@@ -657,11 +661,12 @@ function openAddModal() {
     document.getElementById('categoryInput').value = '';
     document.getElementById('typeSelect').value = 'expense';
     document.getElementById('dateInput').value = new Date().toISOString().slice(0, 10);
+    recurringCheckbox.checked = false;
     document.getElementById('transactionModal').classList.add('active');
 }
 
 function openEditModal(id) {
-    const t = transactions.find(t => t.id === id);
+    const t = transactions.find(tx => tx.id === id);
     if (!t) return;
     currentEditId = id;
     document.getElementById('modalTitle').textContent = 'Modifier la transaction';
@@ -670,6 +675,7 @@ function openEditModal(id) {
     document.getElementById('categoryInput').value = t.category || '';
     document.getElementById('typeSelect').value = t.type;
     document.getElementById('dateInput').value = t.date || new Date().toISOString().slice(0, 10);
+    recurringCheckbox.checked = t.recurring || false;
     document.getElementById('transactionModal').classList.add('active');
 }
 
@@ -685,18 +691,22 @@ function handleFormSubmit(e) {
     const category = document.getElementById('categoryInput').value.trim() || 'Divers';
     const type = document.getElementById('typeSelect').value;
     let date = document.getElementById('dateInput').value || new Date().toISOString().slice(0, 10);
+    const recurring = recurringCheckbox.checked;
     if (!description || !amount || amount <= 0) return alert('Veuillez remplir tous les champs.');
     if (currentEditId === null) {
-        transactions.push({ id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6), description, amount, category, type, date });
+        transactions.push({ 
+            id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6), 
+            description, amount, category, type, date, recurring 
+        });
     } else {
-        const idx = transactions.findIndex(t => t.id === currentEditId);
-        if (idx !== -1) transactions[idx] = { ...transactions[idx], description, amount, category, type, date };
+        const idx = transactions.findIndex(tx => tx.id === currentEditId);
+        if (idx !== -1) transactions[idx] = { ...transactions[idx], description, amount, category, type, date, recurring };
     }
     closeModal();
     fullRefresh();
 }
 
-// ===== COMPTES ÉPARGNE AMÉLIORÉS =====
+// ===== COMPTES ÉPARGNE =====
 function loadSavingsAccounts() {
     const stored = localStorage.getItem('savingsAccounts');
     savingsAccounts = stored ? JSON.parse(stored) : [];
@@ -987,6 +997,67 @@ function renderDashboard() {
     }).join('');
 }
 
+// ===== TRANSACTIONS RÉCURRENTES =====
+function getRecurringTransactions() {
+    return transactions.filter(t => t.recurring === true);
+}
+
+function toggleRecurringStatus(id) {
+    const t = transactions.find(tx => tx.id === id);
+    if (t) {
+        t.recurring = !t.recurring;
+        saveToLocalStorage();
+        fullRefresh();
+        renderRecurringList();
+    }
+}
+
+function renderRecurringList() {
+    const container = document.getElementById('recurringList');
+    if (!container) return;
+    const recurring = getRecurringTransactions();
+    const countSpan = document.getElementById('recurringCount');
+    if (countSpan) {
+        countSpan.textContent = `${recurring.length} transaction(s)`;
+    }
+    if (recurring.length === 0) {
+        container.innerHTML = '<div class="empty-cats">Aucune transaction récurrente. Cochez "Transaction récurrente" dans une transaction pour l\'ajouter ici.</div>';
+        return;
+    }
+    let html = '';
+    recurring.forEach(t => {
+        const amountClass = t.type === 'expense' ? 'negative' : 'positive';
+        const amountSign = t.type === 'expense' ? '-' : '+';
+        html += `
+            <div class="recurring-item" data-id="${t.id}">
+                <span class="recurring-desc">${escapeHtml(t.description)}</span>
+                <span class="recurring-category">${escapeHtml(t.category || 'Non catégorisé')}</span>
+                <span class="recurring-date">${t.date || ''}</span>
+                <span class="recurring-amount ${amountClass}">${amountSign} ${t.amount.toFixed(2)} ${appSettings.currency}</span>
+                <button class="recurring-toggle" data-id="${t.id}" title="Retirer des récurrentes">✕</button>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+    document.querySelectorAll('.recurring-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            toggleRecurringStatus(btn.dataset.id);
+        });
+    });
+}
+
+function toggleRecurringView() {
+    const view = document.getElementById('recurringView');
+    if (view) {
+        if (view.style.display === 'none') {
+            renderRecurringList();
+            view.style.display = 'block';
+        } else {
+            view.style.display = 'none';
+        }
+    }
+}
+
 // ===== CALENDRIER =====
 function renderCalendar() {
     const year = calendarCurrentDate.getFullYear();
@@ -1172,13 +1243,25 @@ function handleDuplicateSubmit(e) {
     const source = document.getElementById('sourceMonth').value;
     const target = document.getElementById('targetMonth').value;
     const overwrite = document.getElementById('overwriteTarget').checked;
+    const onlyRecurring = document.getElementById('onlyRecurring').checked;
     if (!source || !target) return alert('Sélectionnez deux mois.');
-    const sourceTx = transactions.filter(t => t.date && t.date.startsWith(source));
-    if (!sourceTx.length) return alert(`Aucune transaction en ${source}.`);
+    let sourceTx = transactions.filter(t => t.date && t.date.startsWith(source));
+    if (onlyRecurring) {
+        sourceTx = sourceTx.filter(t => t.recurring === true);
+    }
+    if (!sourceTx.length) {
+        const msg = onlyRecurring ? 'Aucune transaction récurrente trouvée.' : `Aucune transaction en ${source}.`;
+        return alert(msg);
+    }
     let newTx = overwrite ? transactions.filter(t => !t.date.startsWith(target)) : [...transactions];
     sourceTx.forEach(t => {
         const newDate = t.date.replace(source, target);
-        newTx.push({ ...t, id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6), date: newDate });
+        newTx.push({ 
+            ...t, 
+            id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6), 
+            date: newDate,
+            recurring: t.recurring 
+        });
     });
     transactions = newTx;
     saveToLocalStorage();
@@ -1237,6 +1320,11 @@ function fullRefresh() {
     saveToLocalStorage();
     initSortable();
     if (!document.querySelector('.transaction-item')) selectTransaction(null);
+    // Mettre à jour la vue récurrente si visible
+    const recurringView = document.getElementById('recurringView');
+    if (recurringView && recurringView.style.display !== 'none') {
+        renderRecurringList();
+    }
 }
 
 // ===== INIT =====
@@ -1361,6 +1449,9 @@ function init() {
     document.getElementById('savingsTransferForm').addEventListener('submit', handleTransferSubmit);
     document.getElementById('savingsTransferModal').addEventListener('click', (e) => { if (e.target === document.getElementById('savingsTransferModal')) document.getElementById('savingsTransferModal').classList.remove('active'); });
     document.getElementById('openTransferBtn').addEventListener('click', () => openTransferModal());
+
+    // Récurrentes
+    document.getElementById('openRecurringBtn').addEventListener('click', toggleRecurringView);
 
     // Duplication
     document.getElementById('openDuplicateBtn').addEventListener('click', openDuplicateModal);
