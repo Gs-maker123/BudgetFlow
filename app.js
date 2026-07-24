@@ -94,8 +94,8 @@ function applyThemeColor(theme) {
     root.style.setProperty('--revenue-color', c.rev);
     root.style.setProperty('--expense-color', c.exp);
     root.style.setProperty('--bg-body', c.bg);
-    document.querySelectorAll('.btn-add, .btn-savings, .btn-add-savings').forEach(el => {
-        el.style.background = c.primary;
+    document.querySelectorAll('.btn-add, .btn-savings, .btn-add-savings, .btn-transfer').forEach(el => {
+        if (el) el.style.background = c.primary;
     });
     localStorage.setItem('budgetThemeColor', theme);
     document.querySelectorAll('.theme-option').forEach(el => {
@@ -277,7 +277,6 @@ function resetAdvancedFilters() {
 function renderCharts() {
     const monthKey = currentFilterMonth || new Date().toISOString().slice(0, 7);
     
-    // Camembert
     const categorySpending = {};
     transactions
         .filter(t => t.type === 'expense' && t.date.startsWith(monthKey))
@@ -308,7 +307,6 @@ function renderCharts() {
         }
     }
 
-    // Histogramme
     const monthTotals = {};
     const last6Months = [];
     for (let i = 5; i >= 0; i--) {
@@ -698,11 +696,15 @@ function handleFormSubmit(e) {
     fullRefresh();
 }
 
-// ===== COMPTES ÉPARGNE =====
+// ===== COMPTES ÉPARGNE AMÉLIORÉS =====
 function loadSavingsAccounts() {
     const stored = localStorage.getItem('savingsAccounts');
     savingsAccounts = stored ? JSON.parse(stored) : [];
-    savingsAccounts = savingsAccounts.map(acc => ({ ...acc, history: acc.history || [] }));
+    savingsAccounts = savingsAccounts.map(acc => ({
+        ...acc,
+        history: acc.history || [],
+        goal: acc.goal || null
+    }));
 }
 
 function saveSavingsAccounts() {
@@ -734,31 +736,72 @@ function renderSavingsAccounts() {
     if (!container) return;
     if (savingsAccounts.length === 0) {
         container.innerHTML = '<div class="empty-savings">Aucun compte épargne.</div>';
-        document.getElementById('totalSavings').textContent = `0.00 ${appSettings.currency}`;
+        updateSavingsStats();
         return;
     }
-    let html = '', total = 0;
+    let html = '', total = 0, totalInterest = 0, goalsAchieved = 0, totalGoals = 0;
     savingsAccounts.forEach(acc => {
         total += acc.balance;
+        
+        let interest = 0;
+        if (acc.goal && acc.goal.interest > 0) {
+            interest = acc.balance * (acc.goal.interest / 100);
+            totalInterest += interest;
+        }
+        
+        let goalStatus = '';
+        let goalProgress = 0;
+        if (acc.goal) {
+            totalGoals++;
+            const target = acc.goal.target || 0;
+            goalProgress = target > 0 ? Math.min((acc.balance / target) * 100, 100) : 0;
+            if (goalProgress >= 100) goalsAchieved++;
+            const goalClass = goalProgress >= 100 ? 'achieved' : 'not-achieved';
+            const deadline = acc.goal.deadline ? `📅 ${formatDate(acc.goal.deadline)}` : '';
+            const interestText = acc.goal.interest > 0 ? `📈 ${acc.goal.interest}%` : '';
+            goalStatus = `
+                <div class="goal-progress">
+                    <div class="goal-header">
+                        <span>🎯 ${escapeHtml(acc.goal.name)}</span>
+                        <span>${acc.balance.toFixed(0)} / ${target.toFixed(0)} €</span>
+                        <button class="goal-remove" data-account="${acc.id}">✕</button>
+                    </div>
+                    <div class="goal-bar">
+                        <div class="fill" style="width: ${goalProgress}%; background: ${goalProgress >= 100 ? 'var(--revenue-color)' : goalProgress > 70 ? '#f59e0b' : 'var(--expense-color)'};"></div>
+                    </div>
+                    <div class="goal-details">
+                        <span class="goal-amount ${goalClass}">${goalProgress >= 100 ? '✅ Objectif atteint !' : `${goalProgress.toFixed(0)}%`}</span>
+                        <span class="goal-deadline">${deadline} ${interestText}</span>
+                    </div>
+                </div>
+            `;
+        }
+        
         const count = acc.history ? acc.history.length : 0;
         html += `
-            <div class="savings-account-card">
+            <div class="savings-account-card" data-id="${acc.id}">
                 <div class="savings-account-info">
                     <span class="savings-account-name">${escapeHtml(acc.name)}</span>
-                    <span class="savings-account-balance">${acc.balance.toFixed(2)} ${appSettings.currency}</span>
+                    <span class="savings-account-balance ${acc.balance >= 0 ? 'positive' : 'negative'}">${acc.balance >= 0 ? '+' : ''}${acc.balance.toFixed(2)} ${appSettings.currency}</span>
                 </div>
+                ${goalStatus}
                 <div class="savings-account-actions">
                     <button class="operation" data-id="${acc.id}"><i class="fas fa-exchange-alt"></i> Opération</button>
                     <button class="history" data-id="${acc.id}"><i class="fas fa-history"></i> Hist. (${count})</button>
-                    <button class="delete-savings" data-id="${acc.id}"><i class="fas fa-trash"></i> Supprimer</button>
+                    <button class="goal-btn" data-id="${acc.id}"><i class="fas fa-bullseye"></i> Objectif</button>
+                    <button class="transfer-btn" data-id="${acc.id}"><i class="fas fa-arrow-right-arrow-left"></i> Transfert</button>
+                    <button class="delete-savings" data-id="${acc.id}"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         `;
     });
     container.innerHTML = html;
-    document.getElementById('totalSavings').textContent = `${total.toFixed(2)} ${appSettings.currency}`;
+    updateSavingsStats(total, totalInterest, goalsAchieved, totalGoals);
+    
     document.querySelectorAll('.operation').forEach(btn => btn.addEventListener('click', () => openSavingsOperationModal(btn.dataset.id)));
     document.querySelectorAll('.history').forEach(btn => btn.addEventListener('click', () => { currentHistoryAccountId = btn.dataset.id; showHistoryModal(currentHistoryAccountId); }));
+    document.querySelectorAll('.goal-btn').forEach(btn => btn.addEventListener('click', () => openGoalModal(btn.dataset.id)));
+    document.querySelectorAll('.transfer-btn').forEach(btn => btn.addEventListener('click', () => openTransferModal(btn.dataset.id)));
     document.querySelectorAll('.delete-savings').forEach(btn => btn.addEventListener('click', () => {
         if (confirm('Supprimer ce compte ?')) {
             savingsAccounts = savingsAccounts.filter(a => a.id !== btn.dataset.id);
@@ -767,7 +810,20 @@ function renderSavingsAccounts() {
             renderDashboard();
         }
     }));
+    document.querySelectorAll('.goal-remove').forEach(btn => btn.addEventListener('click', () => {
+        if (confirm('Supprimer cet objectif ?')) {
+            const acc = savingsAccounts.find(a => a.id === btn.dataset.account);
+            if (acc) { acc.goal = null; saveSavingsAccounts(); renderSavingsAccounts(); }
+        }
+    }));
     renderDashboard();
+}
+
+function updateSavingsStats(total, totalInterest, goalsAchieved, totalGoals) {
+    document.getElementById('totalSavings').textContent = `${(total || 0).toFixed(2)} ${appSettings.currency}`;
+    document.getElementById('totalInterest').textContent = `${(totalInterest || 0).toFixed(2)} ${appSettings.currency}`;
+    const goalsText = totalGoals > 0 ? `${goalsAchieved || 0}/${totalGoals}` : '0/0';
+    document.getElementById('goalsAchieved').textContent = goalsText;
 }
 
 function openSavingsOperationModal(id) {
@@ -832,6 +888,73 @@ function showHistoryModal(id) {
         });
     }
     document.getElementById('savingsHistoryModal').classList.add('active');
+}
+
+// ===== OBJECTIF D'ÉPARGNE =====
+function openGoalModal(accountId) {
+    const acc = savingsAccounts.find(a => a.id === accountId);
+    if (!acc) return;
+    document.getElementById('goalAccountId').value = accountId;
+    document.getElementById('goalModalTitle').textContent = `🎯 Objectif pour ${acc.name}`;
+    document.getElementById('goalName').value = acc.goal?.name || '';
+    document.getElementById('goalTarget').value = acc.goal?.target || '';
+    document.getElementById('goalDeadline').value = acc.goal?.deadline || '';
+    document.getElementById('goalInterest').value = acc.goal?.interest || 0;
+    document.getElementById('savingsGoalModal').classList.add('active');
+}
+
+function handleGoalSubmit(e) {
+    e.preventDefault();
+    const accountId = document.getElementById('goalAccountId').value;
+    const name = document.getElementById('goalName').value.trim();
+    const target = parseFloat(document.getElementById('goalTarget').value);
+    const deadline = document.getElementById('goalDeadline').value || null;
+    const interest = parseFloat(document.getElementById('goalInterest').value) || 0;
+    if (!name || !target || target <= 0) return alert('Veuillez remplir tous les champs.');
+    const acc = savingsAccounts.find(a => a.id === accountId);
+    if (!acc) return;
+    acc.goal = { name, target, deadline, interest };
+    saveSavingsAccounts();
+    renderSavingsAccounts();
+    document.getElementById('savingsGoalModal').classList.remove('active');
+}
+
+// ===== TRANSFERT ENTRE COMPTES =====
+function openTransferModal(sourceId) {
+    const selects = [document.getElementById('transferSource'), document.getElementById('transferTarget')];
+    const options = savingsAccounts.map(a => `<option value="${a.id}">${escapeHtml(a.name)} (${a.balance.toFixed(2)} ${appSettings.currency})</option>`).join('');
+    selects.forEach(select => {
+        select.innerHTML = options;
+    });
+    if (sourceId) {
+        document.getElementById('transferSource').value = sourceId;
+        const targets = savingsAccounts.filter(a => a.id !== sourceId);
+        if (targets.length > 0) {
+            document.getElementById('transferTarget').value = targets[0].id;
+        }
+    }
+    document.getElementById('transferAmount').value = '';
+    document.getElementById('savingsTransferModal').classList.add('active');
+}
+
+function handleTransferSubmit(e) {
+    e.preventDefault();
+    const sourceId = document.getElementById('transferSource').value;
+    const targetId = document.getElementById('transferTarget').value;
+    const amount = parseFloat(document.getElementById('transferAmount').value);
+    if (sourceId === targetId) return alert('Les comptes doivent être différents.');
+    if (!amount || amount <= 0) return alert('Montant invalide.');
+    const source = savingsAccounts.find(a => a.id === sourceId);
+    const target = savingsAccounts.find(a => a.id === targetId);
+    if (!source || !target) return alert('Compte introuvable.');
+    if (source.balance < amount) return alert(`Solde insuffisant sur ${source.name}.`);
+    source.balance -= amount;
+    target.balance += amount;
+    addOperationToHistory(sourceId, 'debit', amount, `Transfert vers ${target.name}`);
+    addOperationToHistory(targetId, 'credit', amount, `Transfert depuis ${source.name}`);
+    saveSavingsAccounts();
+    renderSavingsAccounts();
+    document.getElementById('savingsTransferModal').classList.remove('active');
 }
 
 // ===== DASHBOARD =====
@@ -1227,6 +1350,17 @@ function init() {
         }
     });
     document.getElementById('deleteOperationModal').addEventListener('click', (e) => { if (e.target === document.getElementById('deleteOperationModal')) document.getElementById('deleteOperationModal').classList.remove('active'); });
+
+    // Objectif épargne
+    document.getElementById('closeGoalModalBtn').addEventListener('click', () => document.getElementById('savingsGoalModal').classList.remove('active'));
+    document.getElementById('savingsGoalForm').addEventListener('submit', handleGoalSubmit);
+    document.getElementById('savingsGoalModal').addEventListener('click', (e) => { if (e.target === document.getElementById('savingsGoalModal')) document.getElementById('savingsGoalModal').classList.remove('active'); });
+
+    // Transfert entre comptes
+    document.getElementById('closeTransferModalBtn').addEventListener('click', () => document.getElementById('savingsTransferModal').classList.remove('active'));
+    document.getElementById('savingsTransferForm').addEventListener('submit', handleTransferSubmit);
+    document.getElementById('savingsTransferModal').addEventListener('click', (e) => { if (e.target === document.getElementById('savingsTransferModal')) document.getElementById('savingsTransferModal').classList.remove('active'); });
+    document.getElementById('openTransferBtn').addEventListener('click', () => openTransferModal());
 
     // Duplication
     document.getElementById('openDuplicateBtn').addEventListener('click', openDuplicateModal);
