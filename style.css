@@ -1467,3 +1467,257 @@ body.dark-mode .scroll-top-btn:hover { background: var(--revenue-color); }
     margin-left: 0.3rem;
     display: inline-block;
 }
+
+/* ===== MENU DÉROULANT ===== */
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.dropdown-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    padding: 0.6rem 1rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    transition: 0.2s;
+    min-width: 200px;
+    justify-content: space-between;
+}
+.dropdown-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--revenue-color);
+}
+.dropdown-btn .fa-chevron-down {
+    font-size: 0.8rem;
+    transition: transform 0.2s;
+}
+.dropdown-btn.open .fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    top: 110%;
+    left: 0;
+    min-width: 240px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: 1rem;
+    box-shadow: var(--card-shadow);
+    z-index: 100;
+    padding: 0.3rem 0;
+    overflow: hidden;
+}
+.dropdown-content.show {
+    display: block;
+    animation: fadeSlideDown 0.2s ease;
+}
+
+@keyframes fadeSlideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-content a {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.6rem 1rem;
+    text-decoration: none;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    transition: 0.15s;
+}
+.dropdown-content a:hover {
+    background: var(--hover-bg);
+}
+.dropdown-content a.active {
+    background: var(--category-bg);
+    color: var(--revenue-color);
+    font-weight: 600;
+}
+.dropdown-content a i {
+    width: 20px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+/* ===== VUES ===== */
+.view-content {
+    display: none;
+    animation: fadeIn 0.25s ease;
+}
+.view-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== DASHBOARD ===== */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.dashboard-chart {
+    background: var(--card-bg);
+    border-radius: 1.5rem;
+    padding: 1rem;
+    border: 1px solid var(--border-light);
+}
+.dashboard-chart h4 {
+    color: var(--text-primary);
+    margin-bottom: 0.8rem;
+}
+.recent-transactions {
+    background: var(--card-bg);
+    border-radius: 1.5rem;
+    padding: 1.2rem 1.5rem;
+    border: 1px solid var(--border-light);
+}
+.recent-transactions h3 {
+    color: var(--text-primary);
+    margin-bottom: 0.8rem;
+}
+#recentTransactionsList .transaction-item {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.85rem;
+}
+#recentTransactionsList .transaction-info {
+    grid-template-columns: minmax(100px, 2fr) minmax(80px, 1.5fr) minmax(80px, 1fr) minmax(80px, 0.8fr);
+}
+
+/* ===== GRAPHIQUES COMPLETS ===== */
+.charts-full h3 {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+.charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+.chart-card {
+    background: var(--card-bg);
+    border-radius: 1.5rem;
+    padding: 1rem;
+    border: 1px solid var(--border-light);
+}
+.chart-card h4 {
+    color: var(--text-primary);
+    margin-bottom: 0.8rem;
+}
+.chart-card canvas {
+    max-height: 250px;
+    max-width: 100%;
+}
+
+/* ===== PARAMÈTRES ===== */
+.settings-view {
+    max-width: 600px;
+    margin: 0 auto;
+}
+.settings-view h3 {
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+}
+.settings-actions {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+}
+.btn-save-settings {
+    background: var(--revenue-color);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
+}
+.btn-save-settings:hover {
+    transform: scale(1.02);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 860px) {
+    .header-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .dropdown-btn {
+        min-width: 160px;
+        font-size: 0.85rem;
+        padding: 0.5rem 0.8rem;
+    }
+    .dropdown-content {
+        min-width: 200px;
+    }
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+    .savings-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .header-controls {
+        flex-wrap: wrap;
+    }
+    .dropdown-btn {
+        min-width: 140px;
+        font-size: 0.8rem;
+    }
+    .header-actions .btn-add span {
+        display: none;
+    }
+    .header-actions .btn-add {
+        padding: 0.5rem 0.8rem;
+    }
+}
+
+/* Bouton Transférer dans l'en-tête de l'épargne */
+.savings-actions .btn-transfer {
+    background: #2c7a3e;
+    color: white;
+    border: none;
+    padding: 0.6rem 0.9rem;
+    border-radius: 3rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+.savings-actions .btn-transfer:hover {
+    background: #1e5a2e;
+    transform: scale(1.02);
+}
