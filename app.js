@@ -8,6 +8,7 @@ let selectedTransactionId = null;
 let appSettings = { initialAmount: 0, currency: '€', displayFormat: 'sign' };
 let currentSortMode = 'manual';
 let savingsAccounts = [];
+let bankAccounts = [];
 let budgets = [];
 let currentOperationToDelete = null;
 let currentHistoryAccountId = null;
@@ -94,7 +95,7 @@ function applyThemeColor(theme) {
     root.style.setProperty('--revenue-color', c.rev);
     root.style.setProperty('--expense-color', c.exp);
     root.style.setProperty('--bg-body', c.bg);
-    document.querySelectorAll('.btn-add, .btn-savings, .btn-add-savings, .btn-transfer').forEach(el => {
+    document.querySelectorAll('.btn-add, .btn-savings, .btn-add-savings, .btn-transfer, .btn-add-bank').forEach(el => {
         if (el) el.style.background = c.primary;
     });
     localStorage.setItem('budgetThemeColor', theme);
@@ -858,7 +859,7 @@ function handleGoalSubmit(e) {
     if (modal) modal.classList.remove('active');
 }
 
-// ===== TRANSFERT ENTRE COMPTES =====
+// ===== TRANSFERT ENTRE COMPTES ÉPARGNE =====
 function openTransferModal(sourceId) {
     const transferSource = document.getElementById('transferSource');
     const transferTarget = document.getElementById('transferTarget');
@@ -903,7 +904,7 @@ function handleTransferSubmit(e) {
     if (modal) modal.classList.remove('active');
 }
 
-// ===== DASHBOARD =====
+// ===== DASHBOARD ÉPARGNE =====
 function renderDashboard() {
     const container = document.getElementById('dashboardContainer');
     if (!container) return;
@@ -981,6 +982,252 @@ function renderRecurringList() {
         });
     });
 }
+
+// ===== DÉPENSES RÉCURRENTES AUTOMATISÉES =====
+function processRecurringTransactions() {
+    const today = new Date();
+    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const processedKey = `recurring_processed_${currentMonth}`;
+    
+    if (localStorage.getItem(processedKey) === 'true') {
+        console.log('Transactions récurrentes déjà traitées pour ce mois');
+        return;
+    }
+    
+    const recurring = transactions.filter(t => t.recurring === true);
+    if (recurring.length === 0) return;
+    
+    let count = 0;
+    recurring.forEach(t => {
+        const day = t.date ? t.date.substring(8, 10) : '01';
+        const newDate = `${currentMonth}-${day}`;
+        const exists = transactions.some(tr => 
+            tr.description === t.description && 
+            tr.amount === t.amount && 
+            tr.type === t.type &&
+            tr.date === newDate
+        );
+        if (!exists) {
+            transactions.push({
+                id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
+                description: t.description,
+                amount: t.amount,
+                category: t.category,
+                type: t.type,
+                date: newDate,
+                recurring: true,
+                autoCreated: true
+            });
+            count++;
+        }
+    });
+    
+    if (count > 0) {
+        saveToLocalStorage();
+        fullRefresh();
+        console.log(`${count} transaction(s) récurrente(s) créée(s) pour ${currentMonth}`);
+    }
+    
+    localStorage.setItem(processedKey, 'true');
+}
+
+function forceProcessRecurring() {
+    const month = new Date().toISOString().slice(0, 7);
+    const key = `recurring_processed_${month}`;
+    localStorage.removeItem(key);
+    processRecurringTransactions();
+    renderRecurringList();
+    alert('Transactions récurrentes traitées !');
+}
+
+function checkRecurringTransactions() {
+    processRecurringTransactions();
+}
+
+// ===== COMPTES BANCAIRES =====
+function loadBankAccounts() {
+    const stored = localStorage.getItem('bankAccounts');
+    bankAccounts = stored ? JSON.parse(stored) : [];
+}
+
+function saveBankAccounts() {
+    localStorage.setItem('bankAccounts', JSON.stringify(bankAccounts));
+}
+
+function renderBankAccounts() {
+    const container = document.getElementById('bankAccountsList');
+    if (!container) return;
+    if (bankAccounts.length === 0) {
+        container.innerHTML = '<div class="empty-bank">Aucun compte bancaire. Cliquez sur "Nouveau compte" pour commencer.</div>';
+        updateBankStats();
+        return;
+    }
+    let html = '';
+    let total = 0;
+    bankAccounts.forEach(acc => {
+        total += acc.balance;
+        const balanceClass = acc.balance >= 0 ? 'positive' : 'negative';
+        html += `
+            <div class="bank-account-card" data-id="${acc.id}">
+                <div class="bank-account-header">
+                    <span class="bank-account-name">${escapeHtml(acc.name)}</span>
+                    <span class="bank-account-type">${getBankTypeLabel(acc.type)}</span>
+                </div>
+                <div class="bank-account-balance ${balanceClass}">${acc.balance >= 0 ? '+' : ''}${acc.balance.toFixed(2)} ${appSettings.currency}</div>
+                <div class="bank-account-institution">${escapeHtml(acc.institution || '')}</div>
+                <div class="bank-account-actions">
+                    <button class="op-btn" data-id="${acc.id}"><i class="fas fa-exchange-alt"></i> Opération</button>
+                    <button class="delete-bank" data-id="${acc.id}"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+    updateBankStats(total);
+    
+    document.querySelectorAll('.op-btn').forEach(btn => {
+        btn.addEventListener('click', () => openBankOperationModal(btn.dataset.id));
+    });
+    document.querySelectorAll('.delete-bank').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (confirm('Supprimer ce compte bancaire ?')) {
+                bankAccounts = bankAccounts.filter(a => a.id !== btn.dataset.id);
+                saveBankAccounts();
+                renderBankAccounts();
+            }
+        });
+    });
+}
+
+function getBankTypeLabel(type) {
+    const labels = {
+        courant: '💳 Compte courant',
+        livret: '🏦 Livret',
+        pel: '📈 PEL',
+        lds: '🏦 LDD',
+        autre: '📁 Autre'
+    };
+    return labels[type] || type;
+}
+
+function updateBankStats(total) {
+    const totalEl = document.getElementById('totalBankBalance');
+    const countEl = document.getElementById('bankCount');
+    if (totalEl) totalEl.textContent = `${(total || 0).toFixed(2)} ${appSettings.currency}`;
+    if (countEl) countEl.textContent = bankAccounts.length;
+}
+
+function openAddBankModal() {
+    const modalTitle = document.getElementById('bankModalTitle');
+    const name = document.getElementById('bankName');
+    const type = document.getElementById('bankType');
+    const balance = document.getElementById('bankInitialBalance');
+    const institution = document.getElementById('bankInstitution');
+    if (modalTitle) modalTitle.textContent = 'Ajouter un compte bancaire';
+    if (name) name.value = '';
+    if (type) type.value = 'courant';
+    if (balance) balance.value = '0';
+    if (institution) institution.value = '';
+    const modal = document.getElementById('bankAccountModal');
+    if (modal) modal.classList.add('active');
+}
+
+function handleBankFormSubmit(e) {
+    e.preventDefault();
+    const name = document.getElementById('bankName');
+    const type = document.getElementById('bankType');
+    const balance = document.getElementById('bankInitialBalance');
+    const institution = document.getElementById('bankInstitution');
+    const nameVal = name ? name.value.trim() : '';
+    const typeVal = type ? type.value : 'courant';
+    const balanceVal = balance ? parseFloat(balance.value) || 0 : 0;
+    const institutionVal = institution ? institution.value.trim() : '';
+    if (!nameVal) return alert('Veuillez donner un nom au compte.');
+    bankAccounts.push({
+        id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
+        name: nameVal,
+        type: typeVal,
+        balance: balanceVal,
+        institution: institutionVal
+    });
+    saveBankAccounts();
+    renderBankAccounts();
+    const modal = document.getElementById('bankAccountModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function openBankOperationModal(accountId) {
+    const acc = bankAccounts.find(a => a.id === accountId);
+    if (!acc) return;
+    const opAccountId = document.getElementById('bankOpAccountId');
+    const modalTitle = document.getElementById('bankOpModalTitle');
+    const opType = document.getElementById('bankOpType');
+    const opAmount = document.getElementById('bankOpAmount');
+    const opDescription = document.getElementById('bankOpDescription');
+    const targetSelect = document.getElementById('bankOpTarget');
+    if (opAccountId) opAccountId.value = accountId;
+    if (modalTitle) modalTitle.textContent = `Opération - ${acc.name}`;
+    if (opType) opType.value = 'credit';
+    if (opAmount) opAmount.value = '';
+    if (opDescription) opDescription.value = '';
+    if (targetSelect) {
+        targetSelect.innerHTML = bankAccounts
+            .filter(a => a.id !== accountId)
+            .map(a => `<option value="${a.id}">${escapeHtml(a.name)} (${a.balance.toFixed(2)} €)</option>`)
+            .join('');
+    }
+    const group = document.getElementById('bankTransferTargetGroup');
+    if (group) group.style.display = 'none';
+    const modal = document.getElementById('bankOperationModal');
+    if (modal) modal.classList.add('active');
+}
+
+function handleBankOperationSubmit(e) {
+    e.preventDefault();
+    const opAccountId = document.getElementById('bankOpAccountId');
+    const opType = document.getElementById('bankOpType');
+    const opAmount = document.getElementById('bankOpAmount');
+    const opDescription = document.getElementById('bankOpDescription');
+    const accountId = opAccountId ? opAccountId.value : '';
+    const type = opType ? opType.value : 'credit';
+    const amount = opAmount ? parseFloat(opAmount.value) : 0;
+    const description = opDescription ? opDescription.value.trim() || 'Opération bancaire' : 'Opération bancaire';
+    if (!amount || amount <= 0) return alert('Montant invalide.');
+    const acc = bankAccounts.find(a => a.id === accountId);
+    if (!acc) return;
+    
+    if (type === 'credit') {
+        acc.balance += amount;
+    } else if (type === 'debit') {
+        if (acc.balance < amount && !confirm('Le solde deviendra négatif. Continuer ?')) return;
+        acc.balance -= amount;
+    } else if (type === 'transfer') {
+        const targetSelect = document.getElementById('bankOpTarget');
+        const targetId = targetSelect ? targetSelect.value : '';
+        const target = bankAccounts.find(a => a.id === targetId);
+        if (!target) return alert('Compte destinataire introuvable.');
+        if (acc.balance < amount) return alert('Solde insuffisant.');
+        acc.balance -= amount;
+        target.balance += amount;
+    }
+    saveBankAccounts();
+    renderBankAccounts();
+    const modal = document.getElementById('bankOperationModal');
+    if (modal) modal.classList.remove('active');
+}
+
+// Gestionnaire pour l'affichage du champ de virement
+document.addEventListener('DOMContentLoaded', function() {
+    const bankOpType = document.getElementById('bankOpType');
+    if (bankOpType) {
+        bankOpType.addEventListener('change', function() {
+            const group = document.getElementById('bankTransferTargetGroup');
+            if (group) {
+                group.style.display = this.value === 'transfer' ? 'block' : 'none';
+            }
+        });
+    }
+});
 
 // ===== CALENDRIER =====
 function renderCalendar() {
@@ -1267,20 +1514,17 @@ function initNavigation() {
 
     if (!dropdownBtn || !dropdownContent) return;
 
-    // Ouverture/fermeture du menu
     dropdownBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         dropdownBtn.classList.toggle('open');
         dropdownContent.classList.toggle('show');
     });
 
-    // Fermer le menu au clic en dehors
     document.addEventListener('click', () => {
         dropdownBtn.classList.remove('open');
         dropdownContent.classList.remove('show');
     });
 
-    // Sélection d'une vue
     menuItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
@@ -1292,30 +1536,25 @@ function initNavigation() {
     });
 
     function switchView(viewId) {
-        // Masquer toutes les vues
         views.forEach(v => {
             v.classList.remove('active');
             v.style.display = 'none';
         });
 
-        // Afficher la vue sélectionnée
         const targetView = document.getElementById(`view-${viewId}`);
         if (targetView) {
             targetView.style.display = 'block';
             targetView.classList.add('active');
         }
 
-        // Mettre à jour le label du bouton
         const activeItem = dropdownContent.querySelector(`a[data-view="${viewId}"]`);
         if (activeItem && currentViewLabel) {
             currentViewLabel.innerHTML = activeItem.innerHTML;
         }
 
-        // Mettre à jour les items actifs
         menuItems.forEach(i => i.classList.remove('active'));
         if (activeItem) activeItem.classList.add('active');
 
-        // Rafraîchir le contenu spécifique à la vue
         if (viewId === 'calendar') {
             renderCalendar();
         } else if (viewId === 'monthly' && typeof renderMonthlyTable !== 'undefined') {
@@ -1325,6 +1564,8 @@ function initNavigation() {
             renderDashboard();
         } else if (viewId === 'recurring') {
             renderRecurringList();
+        } else if (viewId === 'bank') {
+            renderBankAccounts();
         } else if (viewId === 'charts') {
             renderFullCharts();
         } else if (viewId === 'dashboard') {
@@ -1340,7 +1581,6 @@ function initNavigation() {
         }
     }
 
-    // Vue par défaut
     switchView('dashboard');
 }
 
@@ -1379,7 +1619,6 @@ function renderRecentTransactions() {
 function renderCharts() {
     const monthKey = currentFilterMonth || new Date().toISOString().slice(0, 7);
     
-    // Camembert
     const categorySpending = {};
     transactions
         .filter(t => t.type === 'expense' && t.date.startsWith(monthKey))
@@ -1410,7 +1649,6 @@ function renderCharts() {
         }
     }
 
-    // Histogramme
     const monthTotals = {};
     const last6Months = [];
     for (let i = 5; i >= 0; i--) {
@@ -1460,7 +1698,6 @@ function renderCharts() {
 }
 
 function renderFullCharts() {
-    // Camembert complet
     const monthKey = currentFilterMonth || new Date().toISOString().slice(0, 7);
     const categorySpending = {};
     transactions
@@ -1484,7 +1721,6 @@ function renderFullCharts() {
         });
     }
 
-    // Histogramme complet
     const monthTotals = {};
     const last6Months = [];
     for (let i = 5; i >= 0; i--) {
@@ -1524,7 +1760,6 @@ function renderFullCharts() {
         });
     }
 
-    // Courbe d'évolution du solde
     const ctxLineFull = document.getElementById('lineChartFull')?.getContext('2d');
     if (ctxLineFull) {
         const sorted = [...transactions].sort((a,b) => new Date(a.date) - new Date(b.date));
@@ -1577,20 +1812,21 @@ function fullRefresh() {
     saveToLocalStorage();
     initSortable();
     if (!document.querySelector('.transaction-item')) selectTransaction(null);
-    // Mettre à jour la vue récurrente si visible
     const recurringView = document.getElementById('view-recurring');
     if (recurringView && recurringView.classList.contains('active')) {
         renderRecurringList();
     }
-    // Mettre à jour les récentes transactions si visible
     const dashboardView = document.getElementById('view-dashboard');
     if (dashboardView && dashboardView.classList.contains('active')) {
         renderRecentTransactions();
     }
-    // Mettre à jour les graphiques complets si visible
     const chartsView = document.getElementById('view-charts');
     if (chartsView && chartsView.classList.contains('active')) {
         renderFullCharts();
+    }
+    const bankView = document.getElementById('view-bank');
+    if (bankView && bankView.classList.contains('active')) {
+        renderBankAccounts();
     }
 }
 
@@ -1613,16 +1849,19 @@ function init() {
     loadInitialData();
     loadBudgets();
     loadSavingsAccounts();
+    loadBankAccounts();
     loadSortMode();
     applySorting();
     fullRefresh();
     renderSavingsAccounts();
     renderDashboard();
+    renderBankAccounts();
     initMonthFilter();
     initQuickActionBar();
     initCalendar();
     initSortControls();
     initNavigation();
+    checkRecurringTransactions();
 
     // Événements
     if (openAddBtn) openAddBtn.addEventListener('click', openAddModal);
@@ -1875,7 +2114,7 @@ function init() {
         });
     }
 
-    // Transfert entre comptes
+    // Transfert épargne
     const closeTransferModalBtn = document.getElementById('closeTransferModalBtn');
     if (closeTransferModalBtn) {
         closeTransferModalBtn.addEventListener('click', () => {
@@ -1905,6 +2144,63 @@ function init() {
             if (view && !view.classList.contains('active')) {
                 switchView('recurring');
             }
+        });
+    }
+    
+    const processRecurringBtn = document.getElementById('processRecurringBtn');
+    if (processRecurringBtn) {
+        processRecurringBtn.addEventListener('click', forceProcessRecurring);
+    }
+
+    // Comptes bancaires
+    const openBankBtn = document.getElementById('openBankBtn');
+    if (openBankBtn) {
+        openBankBtn.addEventListener('click', () => {
+            const view = document.getElementById('view-bank');
+            if (view && !view.classList.contains('active')) {
+                switchView('bank');
+            }
+        });
+    }
+    
+    const addBankAccountBtn = document.getElementById('addBankAccountBtn');
+    if (addBankAccountBtn) {
+        addBankAccountBtn.addEventListener('click', openAddBankModal);
+    }
+    
+    const closeBankModalBtn = document.getElementById('closeBankModalBtn');
+    if (closeBankModalBtn) {
+        closeBankModalBtn.addEventListener('click', () => {
+            const modal = document.getElementById('bankAccountModal');
+            if (modal) modal.classList.remove('active');
+        });
+    }
+    
+    const bankAccountForm = document.getElementById('bankAccountForm');
+    if (bankAccountForm) bankAccountForm.addEventListener('submit', handleBankFormSubmit);
+    
+    const bankAccountModal = document.getElementById('bankAccountModal');
+    if (bankAccountModal) {
+        bankAccountModal.addEventListener('click', (e) => { 
+            if (e.target === bankAccountModal) bankAccountModal.classList.remove('active'); 
+        });
+    }
+    
+    const closeBankOpModalBtn = document.getElementById('closeBankOpModalBtn');
+    if (closeBankOpModalBtn) {
+        closeBankOpModalBtn.addEventListener('click', () => {
+            const modal = document.getElementById('bankOperationModal');
+            if (modal) modal.classList.remove('active');
+        });
+    }
+    
+    const bankOperationForm = document.getElementById('bankOperationForm');
+    if (bankOperationForm) bankOperationForm.addEventListener('submit', handleBankOperationSubmit);
+    
+    const bankOperationModal = document.getElementById('bankOperationModal');
+    if (bankOperationModal) {
+        bankOperationModal.addEventListener('click', (e) => { 
+            if (e.target === bankOperationModal) bankOperationModal.classList.remove('active'); 
         });
     }
 
@@ -1981,7 +2277,7 @@ function init() {
         });
     }
 
-    // Vue mensuelle - maintenant gérée par le menu
+    // Vue mensuelle
     const openMonthlyBtn = document.getElementById('openMonthlyBtn');
     if (openMonthlyBtn) {
         openMonthlyBtn.addEventListener('click', () => {
@@ -2020,7 +2316,7 @@ function init() {
 
 // ===== EXPORT DATA =====
 function exportData() {
-    const data = { transactions, settings: appSettings, savings: savingsAccounts, budgets };
+    const data = { transactions, settings: appSettings, savings: savingsAccounts, budgets, bankAccounts };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -2037,13 +2333,16 @@ function importData(file) {
             if (data.settings) appSettings = data.settings;
             if (data.savings) savingsAccounts = data.savings;
             if (data.budgets) budgets = data.budgets;
+            if (data.bankAccounts) bankAccounts = data.bankAccounts;
             saveToLocalStorage();
             saveSavingsAccounts();
             saveBudgets();
+            saveBankAccounts();
             saveSettingsToLocalStorage();
             fullRefresh();
             renderSavingsAccounts();
             renderBudgets();
+            renderBankAccounts();
             alert('Import réussi !');
         } catch (err) {
             alert('Erreur: ' + err.message);
@@ -2052,39 +2351,34 @@ function importData(file) {
     reader.readAsText(file);
 }
 
-// ===== SWITCH VIEW (exposé pour les autres fonctions) =====
+// ===== SWITCH VIEW =====
 function switchView(viewId) {
     const dropdownContent = document.getElementById('dropdownContent');
     const views = document.querySelectorAll('.view-content');
     const currentViewLabel = document.getElementById('currentViewLabel');
     const menuItems = dropdownContent ? dropdownContent.querySelectorAll('a') : [];
     
-    // Masquer toutes les vues
     views.forEach(v => {
         v.classList.remove('active');
         v.style.display = 'none';
     });
 
-    // Afficher la vue sélectionnée
     const targetView = document.getElementById(`view-${viewId}`);
     if (targetView) {
         targetView.style.display = 'block';
         targetView.classList.add('active');
     }
 
-    // Mettre à jour le label du bouton
     const activeItem = dropdownContent ? dropdownContent.querySelector(`a[data-view="${viewId}"]`) : null;
     if (activeItem && currentViewLabel) {
         currentViewLabel.innerHTML = activeItem.innerHTML;
     }
 
-    // Mettre à jour les items actifs
     if (menuItems) {
         menuItems.forEach(i => i.classList.remove('active'));
     }
     if (activeItem) activeItem.classList.add('active');
 
-    // Rafraîchir le contenu spécifique à la vue
     if (viewId === 'calendar') {
         renderCalendar();
     } else if (viewId === 'monthly' && typeof renderMonthlyTable !== 'undefined') {
@@ -2094,6 +2388,8 @@ function switchView(viewId) {
         renderDashboard();
     } else if (viewId === 'recurring') {
         renderRecurringList();
+    } else if (viewId === 'bank') {
+        renderBankAccounts();
     } else if (viewId === 'charts') {
         renderFullCharts();
     } else if (viewId === 'dashboard') {
