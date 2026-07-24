@@ -1008,3 +1008,197 @@ body.dark-mode .scroll-top-btn:hover { background: var(--revenue-color); }
 .budget-item .budget-spent.negative {
     color: var(--expense-color) !important;
 }
+
+/* ===== CALENDRIER ===== */
+.calendar-view {
+    background: var(--card-bg);
+    border-radius: 1.5rem;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-light);
+}
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+}
+.calendar-header h3 {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.calendar-nav-btn {
+    background: var(--btn-cancel-bg);
+    border: none;
+    padding: 0.3rem 0.7rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: 0.2s;
+}
+.calendar-nav-btn:hover {
+    background: var(--category-bg);
+    transform: scale(1.02);
+}
+#calendarMonthYear {
+    font-weight: 600;
+    min-width: 120px;
+    text-align: center;
+    color: var(--text-primary);
+}
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+.calendar-day-header {
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    padding: 0.3rem 0;
+}
+.calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.8rem;
+    cursor: pointer;
+    transition: 0.2s;
+    background: var(--hover-bg);
+    border: 1px solid transparent;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    min-height: 40px;
+}
+.calendar-day:hover {
+    transform: scale(1.05);
+    background: var(--category-bg);
+}
+.calendar-day.empty {
+    background: transparent;
+    cursor: default;
+}
+.calendar-day.empty:hover {
+    transform: none;
+    background: transparent;
+}
+.calendar-day.has-transaction {
+    border-color: var(--border-light);
+}
+.calendar-day.has-revenue {
+    border-color: var(--revenue-color);
+}
+.calendar-day.has-expense {
+    border-color: var(--expense-color);
+}
+.calendar-day.selected {
+    border-color: var(--revenue-color);
+    background: var(--category-bg);
+    box-shadow: 0 0 0 2px var(--revenue-color);
+}
+.calendar-day .day-number {
+    font-weight: 600;
+}
+.calendar-day .day-balance {
+    font-size: 0.55rem;
+    font-weight: 500;
+}
+.calendar-day .day-balance.positive {
+    color: var(--revenue-color);
+}
+.calendar-day .day-balance.negative {
+    color: var(--expense-color);
+}
+.calendar-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin: 0.8rem 0 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+.legend-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 4px;
+}
+.legend-dot.positive { background: var(--revenue-color); }
+.legend-dot.negative { background: var(--expense-color); }
+.legend-dot.neutral { background: var(--border-light); }
+
+.calendar-day-detail {
+    margin-top: 1rem;
+    padding: 0.8rem 1rem;
+    background: var(--category-bg);
+    border-radius: 1rem;
+    border: 1px solid var(--border-light);
+}
+.calendar-day-detail h4 {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+.calendar-day-detail .empty-detail {
+    color: var(--empty-color);
+    font-style: italic;
+    text-align: center;
+    padding: 0.5rem;
+}
+.day-transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0.5rem;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 0.85rem;
+}
+.day-transaction-item:last-child {
+    border-bottom: none;
+}
+.day-transaction-item .tx-desc {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+.day-transaction-item .tx-cat {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+.day-transaction-item .tx-amount {
+    font-weight: 600;
+}
+.day-transaction-item .tx-amount.positive {
+    color: var(--revenue-color);
+}
+.day-transaction-item .tx-amount.negative {
+    color: var(--expense-color);
+}
+
+@media (max-width: 600px) {
+    .calendar-day {
+        font-size: 0.7rem;
+        min-height: 32px;
+    }
+    .calendar-day .day-balance {
+        font-size: 0.45rem;
+    }
+    .calendar-nav-btn {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    #calendarMonthYear {
+        font-size: 0.9rem;
+        min-width: 90px;
+    }
+}
