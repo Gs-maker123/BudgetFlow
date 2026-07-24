@@ -14,231 +14,300 @@
 </head>
 <body>
 <div class="app-container">
-    <!-- En-tête -->
+    <!-- En-tête avec menu déroulant -->
     <div class="budget-header">
         <h1><i class="fas fa-wallet"></i> BudgetFlow</h1>
-        <div class="header-buttons">
-            <button class="btn-theme" id="themeToggleBtn" title="Thème"><i class="fas fa-moon"></i></button>
-            <button class="btn-theme-selector" id="themeSelectorBtn" title="Thème couleur"><i class="fas fa-palette"></i></button>
-            <button class="btn-recurring" id="openRecurringBtn"><i class="fas fa-sync-alt"></i> Récurrentes</button>
-            <button class="btn-monthly" id="openMonthlyBtn"><i class="fas fa-chart-bar"></i> Vue 12 mois</button>
-            <button class="btn-settings" id="openSettingsBtn"><i class="fas fa-cog"></i></button>
-            <button class="btn-add" id="openAddModalBtn"><i class="fas fa-plus-circle"></i> Transaction</button>
-            <button class="btn-savings" id="openSavingsBtn"><i class="fas fa-piggy-bank"></i> Épargne</button>
-            <button class="btn-duplicate" id="openDuplicateBtn"><i class="fas fa-copy"></i> Dupliquer</button>
-            <button class="btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> PDF</button>
+        <div class="header-controls">
+            <div class="dropdown-menu" id="mainDropdown">
+                <button class="dropdown-btn" id="dropdownBtn">
+                    <span id="currentViewLabel"><i class="fas fa-tachometer-alt"></i> Tableau de bord</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="dropdown-content" id="dropdownContent">
+                    <a href="#" data-view="dashboard" class="active"><i class="fas fa-tachometer-alt"></i> Tableau de bord</a>
+                    <a href="#" data-view="calendar"><i class="fas fa-calendar-alt"></i> Calendrier</a>
+                    <a href="#" data-view="monthly"><i class="fas fa-chart-bar"></i> Vue 12 mois</a>
+                    <a href="#" data-view="transactions"><i class="fas fa-list-ul"></i> Transactions</a>
+                    <a href="#" data-view="savings"><i class="fas fa-piggy-bank"></i> Épargne</a>
+                    <a href="#" data-view="recurring"><i class="fas fa-sync-alt"></i> Récurrentes</a>
+                    <a href="#" data-view="charts"><i class="fas fa-chart-pie"></i> Graphiques</a>
+                    <a href="#" data-view="settings"><i class="fas fa-cog"></i> Paramètres</a>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn-add" id="openAddModalBtn"><i class="fas fa-plus-circle"></i> Transaction</button>
+                <button class="btn-theme" id="themeToggleBtn"><i class="fas fa-moon"></i></button>
+                <button class="btn-theme-selector" id="themeSelectorBtn"><i class="fas fa-palette"></i></button>
+            </div>
         </div>
     </div>
 
-    <!-- Cartes résumé -->
-    <div class="cards-summary">
-        <div class="card previous-balance" id="previousBalanceCard" style="display: none;">
-            <div class="card-info">
-                <h3>Solde fin mois précédent</h3>
-                <div class="amount" id="previousBalance">0.00 €</div>
+    <!-- ===== CONTENU DES VUES ===== -->
+    <div id="view-dashboard" class="view-content active">
+        <!-- Tableau de bord -->
+        <div class="cards-summary">
+            <div class="card previous-balance" id="previousBalanceCard" style="display: none;">
+                <div class="card-info">
+                    <h3>Solde fin mois précédent</h3>
+                    <div class="amount" id="previousBalance">0.00 €</div>
+                </div>
+                <div class="card-icon"><i class="fas fa-calendar-week"></i></div>
             </div>
-            <div class="card-icon"><i class="fas fa-calendar-week"></i></div>
+            <div class="card balance">
+                <div class="card-info">
+                    <h3>Solde fin de mois <span id="initialHint" class="initial-hint"></span></h3>
+                    <div class="amount" id="totalBalance">0.00 €</div>
+                </div>
+                <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+            </div>
+            <div class="card revenues">
+                <div class="card-info">
+                    <h3>Revenus</h3>
+                    <div class="amount" id="totalRevenue">0.00 €</div>
+                </div>
+                <div class="card-icon"><i class="fas fa-arrow-up"></i></div>
+            </div>
+            <div class="card expenses">
+                <div class="card-info">
+                    <h3>Dépenses</h3>
+                    <div class="amount" id="totalExpense">0.00 €</div>
+                </div>
+                <div class="card-icon"><i class="fas fa-arrow-down"></i></div>
+            </div>
         </div>
-        <div class="card balance">
-            <div class="card-info">
-                <h3>Solde fin de mois <span id="initialHint" class="initial-hint"></span></h3>
-                <div class="amount" id="totalBalance">0.00 €</div>
-            </div>
-            <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+        <div class="category-summary-card" id="categorySummaryContainer">
+            <h3><i class="fas fa-chart-pie"></i> Totaux par catégorie</h3>
+            <div id="categoryList" class="category-list"><div class="empty-cats">Aucune catégorie</div></div>
         </div>
-        <div class="card revenues">
-            <div class="card-info">
-                <h3>Revenus</h3>
-                <div class="amount" id="totalRevenue">0.00 €</div>
+        <div class="dashboard-grid">
+            <div class="dashboard-chart">
+                <h4><i class="fas fa-chart-pie"></i> Répartition des dépenses</h4>
+                <canvas id="pieChart"></canvas>
             </div>
-            <div class="card-icon"><i class="fas fa-arrow-up"></i></div>
+            <div class="dashboard-chart">
+                <h4><i class="fas fa-chart-bar"></i> Évolution mensuelle</h4>
+                <canvas id="barChart"></canvas>
+            </div>
         </div>
-        <div class="card expenses">
-            <div class="card-info">
-                <h3>Dépenses</h3>
-                <div class="amount" id="totalExpense">0.00 €</div>
-            </div>
-            <div class="card-icon"><i class="fas fa-arrow-down"></i></div>
+        <div class="budget-card" id="budgetContainer">
+            <h3><i class="fas fa-bullseye"></i> Budget mensuel par catégorie</h3>
+            <div id="budgetList" class="budget-list"><div class="empty-cats">Aucun budget défini.</div></div>
+            <button class="btn-add-budget" id="addBudgetBtn"><i class="fas fa-plus"></i> Ajouter un budget</button>
+        </div>
+        <div class="recent-transactions">
+            <h3><i class="fas fa-clock"></i> Dernières transactions</h3>
+            <div id="recentTransactionsList" class="transaction-list"></div>
         </div>
     </div>
 
-    <!-- Filtres avancés -->
-    <div class="advanced-filters">
-        <div class="filter-row">
-            <div class="filter-group">
-                <label>Période</label>
-                <input type="date" id="filterDateFrom">
-                <span>→</span>
-                <input type="date" id="filterDateTo">
+    <!-- Vue Calendrier -->
+    <div id="view-calendar" class="view-content" style="display: none;">
+        <div class="calendar-view">
+            <div class="calendar-header">
+                <h3><i class="fas fa-calendar-alt"></i> Calendrier des transactions</h3>
+                <div class="calendar-nav">
+                    <button class="calendar-nav-btn" id="calendarPrevBtn"><i class="fas fa-chevron-left"></i></button>
+                    <span id="calendarMonthYear"></span>
+                    <button class="calendar-nav-btn" id="calendarNextBtn"><i class="fas fa-chevron-right"></i></button>
+                    <button class="calendar-nav-btn" id="calendarTodayBtn"><i class="fas fa-home"></i></button>
+                </div>
             </div>
-            <div class="filter-group">
-                <label>Catégorie</label>
-                <select id="filterCategory"><option value="">Toutes</option></select>
+            <div class="calendar-grid" id="calendarGrid"></div>
+            <div class="calendar-legend">
+                <span><span class="legend-dot positive"></span> Revenu</span>
+                <span><span class="legend-dot negative"></span> Dépense</span>
+                <span><span class="legend-dot neutral"></span> Aucune transaction</span>
             </div>
-            <div class="filter-group">
-                <label>Type</label>
-                <select id="filterType">
-                    <option value="">Tous</option>
-                    <option value="revenue">Revenus</option>
-                    <option value="expense">Dépenses</option>
+            <div class="calendar-day-detail" id="calendarDayDetail">
+                <h4 id="calendarDayTitle">Sélectionnez un jour</h4>
+                <div id="calendarDayTransactions"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vue 12 mois -->
+    <div id="view-monthly" class="view-content" style="display: none;">
+        <div class="monthly-view">
+            <div class="monthly-table-wrapper">
+                <div class="monthly-header">
+                    <h3><i class="fas fa-calendar-alt"></i> Comparatif mensuel (12 mois)</h3>
+                    <button class="btn-pdf-monthly" id="exportMonthlyPdfBtn"><i class="fas fa-file-pdf"></i> Export PDF</button>
+                </div>
+                <div id="monthlyTableContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vue Transactions -->
+    <div id="view-transactions" class="view-content" style="display: none;">
+        <!-- Filtres avancés -->
+        <div class="advanced-filters">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Période</label>
+                    <input type="date" id="filterDateFrom">
+                    <span>→</span>
+                    <input type="date" id="filterDateTo">
+                </div>
+                <div class="filter-group">
+                    <label>Catégorie</label>
+                    <select id="filterCategory"><option value="">Toutes</option></select>
+                </div>
+                <div class="filter-group">
+                    <label>Type</label>
+                    <select id="filterType">
+                        <option value="">Tous</option>
+                        <option value="revenue">Revenus</option>
+                        <option value="expense">Dépenses</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Montant</label>
+                    <input type="number" id="filterMinAmount" placeholder="Min">
+                    <span>→</span>
+                    <input type="number" id="filterMaxAmount" placeholder="Max">
+                </div>
+                <button class="btn-filter-apply" id="applyFiltersBtn"><i class="fas fa-filter"></i> Appliquer</button>
+                <button class="btn-filter-reset" id="resetFiltersBtn"><i class="fas fa-undo"></i> Réinitialiser</button>
+            </div>
+        </div>
+
+        <!-- Filtre mois -->
+        <div class="month-filter">
+            <label for="monthSelect"><i class="fas fa-calendar-alt"></i> Afficher les mouvements du :</label>
+            <select id="monthSelect"></select>
+            <button id="resetMonthFilter" class="btn-reset-filter"><i class="fas fa-undo-alt"></i> Tous les mois</button>
+        </div>
+
+        <!-- Barre actions rapides -->
+        <div class="quick-action-bar">
+            <button class="quick-action-btn" id="qaAddBtn"><i class="fas fa-plus-circle"></i></button>
+            <button class="quick-action-btn" id="qaEditBtn" disabled><i class="fas fa-pen"></i></button>
+            <button class="quick-action-btn" id="qaDeleteBtn" disabled><i class="fas fa-trash-alt"></i></button>
+            <button class="quick-action-btn" id="qaDuplicateBtn" disabled><i class="fas fa-copy"></i></button>
+            <button class="quick-action-btn" id="qaSaveBtn"><i class="fas fa-save"></i></button>
+        </div>
+
+        <div class="transactions-header">
+            <h2><i class="fas fa-list-ul"></i> Mouvements</h2>
+            <div class="sort-controls">
+                <label for="sortSelect">Trier :</label>
+                <select id="sortSelect">
+                    <option value="manual">Par défaut</option>
+                    <option value="category">Catégorie</option>
+                    <option value="date_desc">Date (récent)</option>
+                    <option value="date_asc">Date (ancien)</option>
                 </select>
             </div>
-            <div class="filter-group">
-                <label>Montant</label>
-                <input type="number" id="filterMinAmount" placeholder="Min">
-                <span>→</span>
-                <input type="number" id="filterMaxAmount" placeholder="Max">
-            </div>
-            <button class="btn-filter-apply" id="applyFiltersBtn"><i class="fas fa-filter"></i> Appliquer</button>
-            <button class="btn-filter-reset" id="resetFiltersBtn"><i class="fas fa-undo"></i> Réinitialiser</button>
         </div>
+        <div class="transaction-list" id="transactionListContainer"><div class="empty-list">Aucune transaction.</div></div>
     </div>
 
-    <!-- Totaux par catégorie -->
-    <div class="category-summary-card" id="categorySummaryContainer">
-        <h3><i class="fas fa-chart-pie"></i> Totaux par catégorie</h3>
-        <div id="categoryList" class="category-list"><div class="empty-cats">Aucune catégorie</div></div>
-    </div>
-
-    <!-- Vue récurrentes -->
-    <div id="recurringView" class="recurring-view" style="display: none;">
-        <div class="recurring-wrapper">
-            <div class="recurring-header">
-                <h3><i class="fas fa-sync-alt"></i> Transactions récurrentes</h3>
-                <span class="recurring-count" id="recurringCount">0 transaction(s)</span>
-            </div>
-            <div id="recurringList" class="recurring-list">
-                <div class="empty-cats">Aucune transaction récurrente. Cochez "Transaction récurrente" dans une transaction pour l'ajouter ici.</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Budget -->
-    <div class="budget-card" id="budgetContainer">
-        <h3><i class="fas fa-bullseye"></i> Budget mensuel par catégorie</h3>
-        <div id="budgetList" class="budget-list"><div class="empty-cats">Aucun budget défini.</div></div>
-        <button class="btn-add-budget" id="addBudgetBtn"><i class="fas fa-plus"></i> Ajouter un budget</button>
-    </div>
-
-    <!-- Graphiques -->
-    <div class="charts-container">
-        <div class="chart-box">
-            <h4><i class="fas fa-chart-pie"></i> Répartition des dépenses</h4>
-            <canvas id="pieChart"></canvas>
-        </div>
-        <div class="chart-box">
-            <h4><i class="fas fa-chart-bar"></i> Évolution mensuelle</h4>
-            <canvas id="barChart"></canvas>
-        </div>
-    </div>
-
-    <!-- Calendrier -->
-    <div class="calendar-view">
-        <div class="calendar-header">
-            <h3><i class="fas fa-calendar-alt"></i> Calendrier des transactions</h3>
-            <div class="calendar-nav">
-                <button class="calendar-nav-btn" id="calendarPrevBtn"><i class="fas fa-chevron-left"></i></button>
-                <span id="calendarMonthYear"></span>
-                <button class="calendar-nav-btn" id="calendarNextBtn"><i class="fas fa-chevron-right"></i></button>
-                <button class="calendar-nav-btn" id="calendarTodayBtn"><i class="fas fa-home"></i></button>
-            </div>
-        </div>
-        <div class="calendar-grid" id="calendarGrid"></div>
-        <div class="calendar-legend">
-            <span><span class="legend-dot positive"></span> Revenu</span>
-            <span><span class="legend-dot negative"></span> Dépense</span>
-            <span><span class="legend-dot neutral"></span> Aucune transaction</span>
-        </div>
-        <div class="calendar-day-detail" id="calendarDayDetail">
-            <h4 id="calendarDayTitle">Sélectionnez un jour</h4>
-            <div id="calendarDayTransactions"></div>
-        </div>
-    </div>
-
-    <!-- Dashboard comptes -->
-    <div id="dashboardView" class="dashboard-view">
-        <div class="dashboard-header">
-            <h3><i class="fas fa-tachometer-alt"></i> Tableau de bord des comptes</h3>
-            <button class="btn-refresh-dashboard" id="refreshDashboardBtn"><i class="fas fa-sync-alt"></i></button>
-        </div>
-        <div id="dashboardContainer" class="dashboard-container"><div class="empty-dashboard">Aucun compte actif.</div></div>
-    </div>
-
-    <!-- Filtre mois -->
-    <div class="month-filter">
-        <label for="monthSelect"><i class="fas fa-calendar-alt"></i> Afficher les mouvements du :</label>
-        <select id="monthSelect"></select>
-        <button id="resetMonthFilter" class="btn-reset-filter"><i class="fas fa-undo-alt"></i> Tous les mois</button>
-    </div>
-
-    <!-- Barre actions rapides -->
-    <div class="quick-action-bar">
-        <button class="quick-action-btn" id="qaAddBtn"><i class="fas fa-plus-circle"></i></button>
-        <button class="quick-action-btn" id="qaEditBtn" disabled><i class="fas fa-pen"></i></button>
-        <button class="quick-action-btn" id="qaDeleteBtn" disabled><i class="fas fa-trash-alt"></i></button>
-        <button class="quick-action-btn" id="qaDuplicateBtn" disabled><i class="fas fa-copy"></i></button>
-        <button class="quick-action-btn" id="qaSaveBtn"><i class="fas fa-save"></i></button>
-    </div>
-
-    <!-- Vue mensuelle -->
-    <div id="monthlyView" class="monthly-view" style="display: none;">
-        <div class="monthly-table-wrapper">
-            <div class="monthly-header">
-                <h3><i class="fas fa-calendar-alt"></i> Comparatif mensuel</h3>
-                <button class="btn-pdf-monthly" id="exportMonthlyPdfBtn"><i class="fas fa-file-pdf"></i> Export PDF</button>
-            </div>
-            <div id="monthlyTableContainer"></div>
-        </div>
-    </div>
-
-    <!-- Comptes épargne -->
-    <div id="savingsView" class="savings-view" style="display: none;">
-        <div class="savings-wrapper">
-            <div class="savings-header">
-                <h3><i class="fas fa-piggy-bank"></i> Comptes d'épargne</h3>
-                <div class="savings-actions">
-                    <button class="btn-add-savings" id="addSavingsAccountBtn"><i class="fas fa-plus"></i> Nouveau compte</button>
-                    <button class="btn-transfer" id="openTransferBtn"><i class="fas fa-arrow-right-arrow-left"></i> Transférer</button>
+    <!-- Vue Épargne -->
+    <div id="view-savings" class="view-content" style="display: none;">
+        <div class="savings-view">
+            <div class="savings-wrapper">
+                <div class="savings-header">
+                    <h3><i class="fas fa-piggy-bank"></i> Comptes d'épargne</h3>
+                    <div class="savings-actions">
+                        <button class="btn-add-savings" id="addSavingsAccountBtn"><i class="fas fa-plus"></i> Nouveau compte</button>
+                        <button class="btn-transfer" id="openTransferBtn"><i class="fas fa-arrow-right-arrow-left"></i> Transférer</button>
+                    </div>
                 </div>
-            </div>
-            <div id="savingsAccountsList" class="savings-accounts-list"><div class="empty-savings">Aucun compte épargne.</div></div>
-            <div class="savings-stats">
-                <div class="savings-stat">
-                    <span class="stat-label">💰 Total épargne</span>
-                    <span class="stat-value" id="totalSavings">0.00 €</span>
-                </div>
-                <div class="savings-stat">
-                    <span class="stat-label">📈 Rendement annuel estimé</span>
-                    <span class="stat-value" id="totalInterest">0.00 €</span>
-                </div>
-                <div class="savings-stat">
-                    <span class="stat-label">🎯 Objectifs atteints</span>
-                    <span class="stat-value" id="goalsAchieved">0/0</span>
+                <div id="savingsAccountsList" class="savings-accounts-list"><div class="empty-savings">Aucun compte épargne.</div></div>
+                <div class="savings-stats">
+                    <div class="savings-stat">
+                        <span class="stat-label">💰 Total épargne</span>
+                        <span class="stat-value" id="totalSavings">0.00 €</span>
+                    </div>
+                    <div class="savings-stat">
+                        <span class="stat-label">📈 Rendement annuel estimé</span>
+                        <span class="stat-value" id="totalInterest">0.00 €</span>
+                    </div>
+                    <div class="savings-stat">
+                        <span class="stat-label">🎯 Objectifs atteints</span>
+                        <span class="stat-value" id="goalsAchieved">0/0</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Transactions -->
-    <div class="transactions-header">
-        <h2><i class="fas fa-list-ul"></i> Mouvements</h2>
-        <div class="sort-controls">
-            <label for="sortSelect">Trier :</label>
-            <select id="sortSelect">
-                <option value="manual">Par défaut</option>
-                <option value="category">Catégorie</option>
-                <option value="date_desc">Date (récent)</option>
-                <option value="date_asc">Date (ancien)</option>
-            </select>
+    <!-- Vue Récurrentes -->
+    <div id="view-recurring" class="view-content" style="display: none;">
+        <div class="recurring-view">
+            <div class="recurring-wrapper">
+                <div class="recurring-header">
+                    <h3><i class="fas fa-sync-alt"></i> Transactions récurrentes</h3>
+                    <span class="recurring-count" id="recurringCount">0 transaction(s)</span>
+                </div>
+                <div id="recurringList" class="recurring-list">
+                    <div class="empty-cats">Aucune transaction récurrente.</div>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="transaction-list" id="transactionListContainer"><div class="empty-list">Aucune transaction.</div></div>
+
+    <!-- Vue Graphiques -->
+    <div id="view-charts" class="view-content" style="display: none;">
+        <div class="charts-full">
+            <h3><i class="fas fa-chart-pie"></i> Analyse complète</h3>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h4>Répartition des dépenses</h4>
+                    <canvas id="pieChartFull"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4>Évolution mensuelle</h4>
+                    <canvas id="barChartFull"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4>Évolution du solde</h4>
+                    <canvas id="lineChartFull"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vue Paramètres -->
+    <div id="view-settings" class="view-content" style="display: none;">
+        <div class="settings-view">
+            <h3><i class="fas fa-sliders-h"></i> Paramètres</h3>
+            <form id="settingsForm">
+                <div class="form-group">
+                    <label>Montant initial (solde de départ)</label>
+                    <input type="number" id="initialAmountInput" step="0.01" placeholder="1000.00">
+                </div>
+                <div class="form-group">
+                    <label>Devise</label>
+                    <select id="currencySelect">
+                        <option value="€">Euro (€)</option>
+                        <option value="$">Dollar ($)</option>
+                        <option value="£">Livre (£)</option>
+                        <option value="¥">Yen (¥)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Affichage des montants</label>
+                    <select id="displayFormatSelect">
+                        <option value="sign">Avec signe (+ / -)</option>
+                        <option value="paren">Entre parenthèses</option>
+                    </select>
+                </div>
+                <div class="settings-actions">
+                    <button type="submit" class="btn-save-settings"><i class="fas fa-save"></i> Enregistrer</button>
+                    <button type="button" class="btn-export" id="exportDataBtn"><i class="fas fa-file-export"></i> Exporter</button>
+                    <button type="button" class="btn-import" id="importDataBtn"><i class="fas fa-file-import"></i> Importer</button>
+                    <button type="button" class="btn-pdf" id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Export PDF</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <footer>BudgetFlow by GSTK • © GSTK – 2026 • Tous droits réservés</footer>
 </div>
 
 <!-- ===== MODALES ===== -->
-
 <!-- Transaction -->
 <div id="transactionModal" class="modal-overlay">
     <div class="modal-content">
@@ -272,7 +341,7 @@
             <div class="form-group">
                 <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                     <input type="checkbox" id="recurringCheckbox">
-                    <span>🔄 Transaction récurrente (dupliquée automatiquement)</span>
+                    <span>🔄 Transaction récurrente</span>
                 </label>
             </div>
             <div class="modal-actions">
@@ -379,24 +448,24 @@
 <!-- Objectif épargne -->
 <div id="savingsGoalModal" class="modal-overlay">
     <div class="modal-content">
-        <h3 id="goalModalTitle">🎯 Définir un objectif d'épargne</h3>
+        <h3 id="goalModalTitle">🎯 Définir un objectif</h3>
         <form id="savingsGoalForm">
             <input type="hidden" id="goalAccountId">
             <div class="form-group">
-                <label>Nom de l'objectif</label>
-                <input type="text" id="goalName" placeholder="Ex: Voyage, Maison, Retraite..." required>
+                <label>Nom</label>
+                <input type="text" id="goalName" placeholder="Ex: Voyage" required>
             </div>
             <div class="form-group">
                 <label>Montant cible (€)</label>
                 <input type="number" id="goalTarget" step="0.01" min="0" required>
             </div>
             <div class="form-group">
-                <label>Date limite (optionnelle)</label>
+                <label>Date limite</label>
                 <input type="date" id="goalDeadline">
             </div>
             <div class="form-group">
-                <label>Taux d'intérêt annuel (%)</label>
-                <input type="number" id="goalInterest" step="0.1" min="0" value="0" placeholder="0.0">
+                <label>Taux d'intérêt (%)</label>
+                <input type="number" id="goalInterest" step="0.1" min="0" value="0">
             </div>
             <div class="modal-actions">
                 <button type="button" class="btn-modal btn-cancel" id="closeGoalModalBtn">Annuler</button>
@@ -406,17 +475,17 @@
     </div>
 </div>
 
-<!-- Transfert entre comptes -->
+<!-- Transfert -->
 <div id="savingsTransferModal" class="modal-overlay">
     <div class="modal-content">
-        <h3>🔄 Transférer entre comptes</h3>
+        <h3>🔄 Transférer</h3>
         <form id="savingsTransferForm">
             <div class="form-group">
-                <label>Compte source</label>
+                <label>Source</label>
                 <select id="transferSource" required></select>
             </div>
             <div class="form-group">
-                <label>Compte destination</label>
+                <label>Destination</label>
                 <select id="transferTarget" required></select>
             </div>
             <div class="form-group">
@@ -435,7 +504,7 @@
 <div id="deleteOperationModal" class="modal-overlay">
     <div class="modal-content" style="max-width:400px;">
         <h3>Confirmer</h3>
-        <p>Supprimer cette opération ? Le solde sera recalculé.</p>
+        <p>Supprimer cette opération ?</p>
         <div class="modal-actions">
             <button class="btn-modal btn-cancel" id="cancelDeleteOpBtn">Annuler</button>
             <button class="btn-modal btn-save" id="confirmDeleteOpBtn">Supprimer</button>
@@ -451,16 +520,10 @@
             <div class="form-group"><label>Mois source</label><input type="month" id="sourceMonth" required></div>
             <div class="form-group"><label>Mois cible</label><input type="month" id="targetMonth" required></div>
             <div class="form-group">
-                <label style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="checkbox" id="overwriteTarget" checked>
-                    Remplacer les transactions existantes
-                </label>
+                <label><input type="checkbox" id="overwriteTarget" checked> Remplacer</label>
             </div>
             <div class="form-group">
-                <label style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="checkbox" id="onlyRecurring" checked>
-                    Dupliquer uniquement les transactions récurrentes
-                </label>
+                <label><input type="checkbox" id="onlyRecurring" checked> Uniquement récurrentes</label>
             </div>
             <div class="modal-actions">
                 <button type="button" class="btn-modal btn-cancel" id="closeDuplicateModalBtn">Annuler</button>
@@ -470,33 +533,10 @@
     </div>
 </div>
 
-<!-- Paramètres -->
-<div id="settingsModal" class="modal-overlay">
-    <div class="modal-content">
-        <h3><i class="fas fa-sliders-h"></i> Paramètres</h3>
-        <form id="settingsForm">
-            <div class="form-group"><label>Montant initial</label><input type="number" id="initialAmountInput" step="0.01"></div>
-            <div class="form-group">
-                <label>Devise</label>
-                <select id="currencySelect"><option value="€">Euro</option><option value="$">Dollar</option><option value="£">Livre</option><option value="¥">Yen</option></select>
-            </div>
-            <div class="form-group">
-                <label>Affichage</label>
-                <select id="displayFormatSelect"><option value="sign">Avec signe</option><option value="paren">Parenthèses</option></select>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn-modal btn-cancel" id="closeSettingsBtn">Annuler</button>
-                <button type="submit" class="btn-modal btn-save">Enregistrer</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <!-- Import -->
 <div id="importModal" class="modal-overlay">
     <div class="modal-content">
         <h3><i class="fas fa-file-import"></i> Importer</h3>
-        <p>Sélectionnez un fichier JSON.</p>
         <input type="file" id="importFileInput" accept=".json">
         <div class="modal-actions">
             <button class="btn-modal btn-cancel" id="closeImportModalBtn">Annuler</button>
