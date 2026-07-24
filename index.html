@@ -14,7 +14,7 @@
 </head>
 <body>
 <div class="app-container">
-    <!-- En-tête avec menu déroulant -->
+    <!-- En-tête -->
     <div class="budget-header">
         <h1><i class="fas fa-wallet"></i> BudgetFlow</h1>
         <div class="header-controls">
@@ -30,6 +30,7 @@
                     <a href="#" data-view="transactions"><i class="fas fa-list-ul"></i> Transactions</a>
                     <a href="#" data-view="savings"><i class="fas fa-piggy-bank"></i> Épargne</a>
                     <a href="#" data-view="recurring"><i class="fas fa-sync-alt"></i> Récurrentes</a>
+                    <a href="#" data-view="bank"><i class="fas fa-university"></i> Comptes bancaires</a>
                     <a href="#" data-view="charts"><i class="fas fa-chart-pie"></i> Graphiques</a>
                     <a href="#" data-view="settings"><i class="fas fa-cog"></i> Paramètres</a>
                 </div>
@@ -43,8 +44,8 @@
     </div>
 
     <!-- ===== CONTENU DES VUES ===== -->
+    <!-- Tableau de bord -->
     <div id="view-dashboard" class="view-content active">
-        <!-- Tableau de bord -->
         <div class="cards-summary">
             <div class="card previous-balance" id="previousBalanceCard" style="display: none;">
                 <div class="card-info">
@@ -100,7 +101,7 @@
         </div>
     </div>
 
-    <!-- Vue Calendrier -->
+    <!-- Calendrier -->
     <div id="view-calendar" class="view-content" style="display: none;">
         <div class="calendar-view">
             <div class="calendar-header">
@@ -138,9 +139,8 @@
         </div>
     </div>
 
-    <!-- Vue Transactions -->
+    <!-- Transactions -->
     <div id="view-transactions" class="view-content" style="display: none;">
-        <!-- Filtres avancés -->
         <div class="advanced-filters">
             <div class="filter-row">
                 <div class="filter-group">
@@ -171,15 +171,11 @@
                 <button class="btn-filter-reset" id="resetFiltersBtn"><i class="fas fa-undo"></i> Réinitialiser</button>
             </div>
         </div>
-
-        <!-- Filtre mois -->
         <div class="month-filter">
             <label for="monthSelect"><i class="fas fa-calendar-alt"></i> Afficher les mouvements du :</label>
             <select id="monthSelect"></select>
             <button id="resetMonthFilter" class="btn-reset-filter"><i class="fas fa-undo-alt"></i> Tous les mois</button>
         </div>
-
-        <!-- Barre actions rapides -->
         <div class="quick-action-bar">
             <button class="quick-action-btn" id="qaAddBtn"><i class="fas fa-plus-circle"></i></button>
             <button class="quick-action-btn" id="qaEditBtn" disabled><i class="fas fa-pen"></i></button>
@@ -187,7 +183,6 @@
             <button class="quick-action-btn" id="qaDuplicateBtn" disabled><i class="fas fa-copy"></i></button>
             <button class="quick-action-btn" id="qaSaveBtn"><i class="fas fa-save"></i></button>
         </div>
-
         <div class="transactions-header">
             <h2><i class="fas fa-list-ul"></i> Mouvements</h2>
             <div class="sort-controls">
@@ -203,7 +198,7 @@
         <div class="transaction-list" id="transactionListContainer"><div class="empty-list">Aucune transaction.</div></div>
     </div>
 
-    <!-- Vue Épargne -->
+    <!-- Épargne -->
     <div id="view-savings" class="view-content" style="display: none;">
         <div class="savings-view">
             <div class="savings-wrapper">
@@ -233,13 +228,16 @@
         </div>
     </div>
 
-    <!-- Vue Récurrentes -->
+    <!-- Récurrentes -->
     <div id="view-recurring" class="view-content" style="display: none;">
         <div class="recurring-view">
             <div class="recurring-wrapper">
                 <div class="recurring-header">
                     <h3><i class="fas fa-sync-alt"></i> Transactions récurrentes</h3>
-                    <span class="recurring-count" id="recurringCount">0 transaction(s)</span>
+                    <div class="recurring-actions">
+                        <button class="btn-process-recurring" id="processRecurringBtn"><i class="fas fa-play"></i> Traiter maintenant</button>
+                        <span class="recurring-count" id="recurringCount">0 transaction(s)</span>
+                    </div>
                 </div>
                 <div id="recurringList" class="recurring-list">
                     <div class="empty-cats">Aucune transaction récurrente.</div>
@@ -248,7 +246,30 @@
         </div>
     </div>
 
-    <!-- Vue Graphiques -->
+    <!-- Comptes bancaires -->
+    <div id="view-bank" class="view-content" style="display: none;">
+        <div class="bank-view">
+            <div class="bank-header">
+                <h3><i class="fas fa-university"></i> Comptes bancaires</h3>
+                <button class="btn-add-bank" id="addBankAccountBtn"><i class="fas fa-plus"></i> Nouveau compte</button>
+            </div>
+            <div id="bankAccountsList" class="bank-accounts-list">
+                <div class="empty-bank">Aucun compte bancaire. Cliquez sur "Nouveau compte" pour commencer.</div>
+            </div>
+            <div class="bank-summary">
+                <div class="bank-stat">
+                    <span class="stat-label">💰 Solde total</span>
+                    <span class="stat-value" id="totalBankBalance">0.00 €</span>
+                </div>
+                <div class="bank-stat">
+                    <span class="stat-label">📊 Nombre de comptes</span>
+                    <span class="stat-value" id="bankCount">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphiques -->
     <div id="view-charts" class="view-content" style="display: none;">
         <div class="charts-full">
             <h3><i class="fas fa-chart-pie"></i> Analyse complète</h3>
@@ -269,7 +290,7 @@
         </div>
     </div>
 
-    <!-- Vue Paramètres -->
+    <!-- Paramètres -->
     <div id="view-settings" class="view-content" style="display: none;">
         <div class="settings-view">
             <h3><i class="fas fa-sliders-h"></i> Paramètres</h3>
@@ -308,6 +329,7 @@
 </div>
 
 <!-- ===== MODALES ===== -->
+
 <!-- Transaction -->
 <div id="transactionModal" class="modal-overlay">
     <div class="modal-content">
@@ -338,10 +360,11 @@
                 </select>
             </div>
             <div class="form-group"><label>Date</label><input type="date" id="dateInput"></div>
-            <div class="form-group">
-                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                    <input type="checkbox" id="recurringCheckbox">
-                    <span>🔄 Transaction récurrente</span>
+            <!-- Case à cocher Transaction récurrente - CORRIGÉE -->
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.5rem 0; border-top: 1px solid var(--border-light); margin-top: 0.5rem;">
+                <input type="checkbox" id="recurringCheckbox" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+                <label for="recurringCheckbox" style="cursor: pointer; font-weight: 500; color: var(--text-primary); margin: 0; font-size: 0.95rem;">
+                    <i class="fas fa-sync-alt" style="color: var(--revenue-color);"></i> Transaction récurrente (dupliquée automatiquement)
                 </label>
             </div>
             <div class="modal-actions">
@@ -475,7 +498,7 @@
     </div>
 </div>
 
-<!-- Transfert -->
+<!-- Transfert épargne -->
 <div id="savingsTransferModal" class="modal-overlay">
     <div class="modal-content">
         <h3>🔄 Transférer</h3>
@@ -495,6 +518,75 @@
             <div class="modal-actions">
                 <button type="button" class="btn-modal btn-cancel" id="closeTransferModalBtn">Annuler</button>
                 <button type="submit" class="btn-modal btn-save">Transférer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Compte bancaire -->
+<div id="bankAccountModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="bankModalTitle">Ajouter un compte bancaire</h3>
+        <form id="bankAccountForm">
+            <div class="form-group">
+                <label>Nom du compte *</label>
+                <input type="text" id="bankName" placeholder="Ex: Compte courant, Livret A..." required>
+            </div>
+            <div class="form-group">
+                <label>Type de compte</label>
+                <select id="bankType">
+                    <option value="courant">💳 Compte courant</option>
+                    <option value="livret">🏦 Livret d'épargne</option>
+                    <option value="pel">📈 PEL</option>
+                    <option value="lds">🏦 LDD</option>
+                    <option value="autre">📁 Autre</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Solde initial (€)</label>
+                <input type="number" id="bankInitialBalance" step="0.01" value="0">
+            </div>
+            <div class="form-group">
+                <label>Banque</label>
+                <input type="text" id="bankInstitution" placeholder="Ex: BNP, Crédit Agricole...">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-cancel" id="closeBankModalBtn">Annuler</button>
+                <button type="submit" class="btn-modal btn-save">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Opération bancaire -->
+<div id="bankOperationModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="bankOpModalTitle">Opération</h3>
+        <form id="bankOperationForm">
+            <input type="hidden" id="bankOpAccountId">
+            <div class="form-group">
+                <label>Type</label>
+                <select id="bankOpType">
+                    <option value="credit">Dépôt (+)</option>
+                    <option value="debit">Retrait (-)</option>
+                    <option value="transfer">Virement</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Montant (€)</label>
+                <input type="number" id="bankOpAmount" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" id="bankOpDescription" placeholder="Ex: Virement mensuel">
+            </div>
+            <div class="form-group" id="bankTransferTargetGroup" style="display: none;">
+                <label>Compte destinataire</label>
+                <select id="bankOpTarget"></select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal btn-cancel" id="closeBankOpModalBtn">Annuler</button>
+                <button type="submit" class="btn-modal btn-save">Effectuer</button>
             </div>
         </form>
     </div>
