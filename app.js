@@ -12,7 +12,21 @@ let bankAccounts = [];
 let budgets = [];
 let currentOperationToDelete = null;
 let currentHistoryAccountId = null;
-let advancedFilters = { dateFrom: null, dateTo: null, category: null, type: null, minAmount: null, maxAmount: null };
+let currentDetailAccountId = null;
+let currentDetailAccountType = null;
+let dayDetailDate = null;
+let detailFilters = {
+    dateFrom: null,
+    dateTo: null,
+    type: null,
+    minAmount: null,
+    maxAmount: null,
+    search: null
+};
+let advancedFilters = { 
+    dateFrom: null, dateTo: null, category: null, type: null, 
+    minAmount: null, maxAmount: null, account: null 
+};
 let pieChartInstance = null;
 let barChartInstance = null;
 
@@ -35,10 +49,12 @@ const settingsForm = document.getElementById('settingsForm');
 const modalTitle = document.getElementById('modalTitle');
 const descInput = document.getElementById('descInput');
 const amountInput = document.getElementById('amountInput');
-const categoryInput = document.getElementById('categoryInput');
 const typeSelect = document.getElementById('typeSelect');
-const dateInput = document.getElementById('dateInput');
 const recurringCheckbox = document.getElementById('recurringCheckbox');
+const transactionAccount = document.getElementById('transactionAccount');
+const transactionTarget = document.getElementById('transactionTarget');
+const transferInfo = document.getElementById('transferInfo');
+const transferInfoText = document.getElementById('transferInfoText');
 const initialAmountInput = document.getElementById('initialAmountInput');
 const currencySelect = document.getElementById('currencySelect');
 const displayFormatSelect = document.getElementById('displayFormatSelect');
@@ -59,6 +75,24 @@ function formatDate(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function getAccountName(accountId) {
+    if (accountId === 'general') return 'Compte général';
+    const acc = bankAccounts.find(a => a.id === accountId);
+    return acc ? acc.name : 'Compte inconnu';
+}
+
+function getBankTypeLabel(type) {
+    const labels = {
+        courant: '💳 Compte courant',
+        livret: '🏦 Livret',
+        pel: '📈 PEL',
+        lds: '🏦 LDD',
+        epargne: '🏦 Épargne',
+        autre: '📁 Autre'
+    };
+    return labels[type] || type;
 }
 
 // ===== THÈME CLAIR/SOMBRE =====
@@ -157,22 +191,166 @@ function loadInitialData() {
     const stored = localStorage.getItem('budgetTransactions');
     if (stored) {
         transactions = JSON.parse(stored);
+        migrateTransactionsWithTarget();
     } else {
         transactions = [
-            { id: '1', description: 'Salaire NET', amount: 2450, category: 'Salaire', type: 'revenue', date: '2025-03-01', recurring: true },
-            { id: '2', description: 'Courses supermarché', amount: 89.5, category: 'Alimentation', type: 'expense', date: '2025-03-05', recurring: false },
-            { id: '3', description: 'Netflix', amount: 25.99, category: 'Abonnements', type: 'expense', date: '2025-03-10', recurring: true },
-            { id: '4', description: 'Transport essence', amount: 45.2, category: 'Transport', type: 'expense', date: '2025-02-15', recurring: false },
-            { id: '5', description: 'Freelance design', amount: 380, category: 'Freelance', type: 'revenue', date: '2025-02-20', recurring: false },
-            { id: '6', description: 'Restaurant', amount: 37.4, category: 'Loisirs', type: 'expense', date: '2025-01-25', recurring: false }
+            { id: '1', description: 'Salaire NET', amount: 2450, category: 'Salaire', type: 'revenue', date: '2025-03-01', recurring: true, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
+            { id: '2', description: 'Courses supermarché', amount: 89.5, category: 'Alimentation', type: 'expense', date: '2025-03-05', recurring: false, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
+            { id: '3', description: 'Netflix', amount: 25.99, category: 'Abonnements', type: 'expense', date: '2025-03-10', recurring: true, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
+            { id: '4', description: 'Transport essence', amount: 45.2, category: 'Transport', type: 'expense', date: '2025-02-15', recurring: false, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
+            { id: '5', description: 'Freelance design', amount: 380, category: 'Freelance', type: 'revenue', date: '2025-02-20', recurring: false, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
+            { id: '6', description: 'Restaurant', amount: 37.4, category: 'Loisirs', type: 'expense', date: '2025-01-25', recurring: false, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null }
         ];
+        saveToLocalStorage();
     }
+}
+
+function migrateTransactionsWithTarget() {
+    let changed = false;
     transactions = transactions.map(t => {
-        if (!t.date) t.date = new Date().toISOString().slice(0, 10);
-        if (t.recurring === undefined) t.recurring = false;
+        if (t.target === undefined) {
+            t.target = '';
+            changed = true;
+        }
+        if (t.source === undefined) {
+            t.source = t.account || 'general';
+            changed = true;
+        }
+        if (t.account === undefined) {
+            t.account = 'general';
+            changed = true;
+        }
+        if (t.recurring === undefined) {
+            t.recurring = false;
+            changed = true;
+        }
+        if (!t.date) {
+            t.date = new Date().toISOString().slice(0, 10);
+            changed = true;
+        }
+        if (t.category === undefined) {
+            t.category = '';
+            changed = true;
+        }
+        if (t.isTransfer === undefined) {
+            t.isTransfer = false;
+            changed = true;
+        }
+        if (t.linkedId === undefined) {
+            t.linkedId = null;
+            changed = true;
+        }
         return t;
     });
-    saveToLocalStorage();
+    if (changed) {
+        saveToLocalStorage();
+        console.log('Transactions migrées.');
+    }
+}
+
+// ===== COMPTES BANCAIRES =====
+function loadBankAccounts() {
+    const stored = localStorage.getItem('bankAccounts');
+    bankAccounts = stored ? JSON.parse(stored) : [];
+}
+
+function saveBankAccounts() {
+    localStorage.setItem('bankAccounts', JSON.stringify(bankAccounts));
+}
+
+// ===== SYNCHRONISATION COMPTES BANCAIRES =====
+function updateBankAccountBalance(accountId) {
+    if (!accountId || accountId === 'general') return;
+    const account = bankAccounts.find(a => a.id === accountId);
+    if (!account) return;
+    
+    const accountTransactions = transactions.filter(t => t.account === accountId);
+    let balance = 0;
+    accountTransactions.forEach(t => {
+        if (t.type === 'revenue') balance += t.amount;
+        else balance -= t.amount;
+    });
+    
+    account.balance = balance;
+    saveBankAccounts();
+}
+
+function updateAllBankAccountsBalances() {
+    bankAccounts.forEach(acc => {
+        updateBankAccountBalance(acc.id);
+    });
+    renderBankAccounts();
+    updateTransactionSelects();
+}
+
+// ===== MISE À JOUR DES SÉLECTEURS =====
+function updateTransactionSelects() {
+    if (!transactionAccount || !transactionTarget) return;
+    const currentSource = transactionAccount.value;
+    const currentTarget = transactionTarget.value;
+    const accounts = bankAccounts.map(a => ({
+        id: a.id,
+        name: a.name
+    }));
+    
+    let sourceHtml = '<option value="general">📊 Compte général</option>';
+    let targetHtml = '<option value="">─── Sélectionner ───</option>';
+    targetHtml += '<option value="general">📊 Compte général</option>';
+    
+    accounts.forEach(acc => {
+        const sourceSelected = currentSource === acc.id ? 'selected' : '';
+        const targetSelected = currentTarget === acc.id ? 'selected' : '';
+        sourceHtml += `<option value="${acc.id}" ${sourceSelected}>🏦 ${escapeHtml(acc.name)}</option>`;
+        targetHtml += `<option value="${acc.id}" ${targetSelected}>🏦 ${escapeHtml(acc.name)}</option>`;
+    });
+    
+    transactionAccount.innerHTML = sourceHtml;
+    transactionTarget.innerHTML = targetHtml;
+    
+    if (currentSource && accounts.some(a => a.id === currentSource)) {
+        transactionAccount.value = currentSource;
+    }
+    if (currentTarget && (currentTarget === 'general' || accounts.some(a => a.id === currentTarget))) {
+        transactionTarget.value = currentTarget;
+    }
+    
+    updateTransferInfo();
+}
+
+function updateTransferInfo() {
+    if (!transferInfo || !transferInfoText) return;
+    const source = transactionAccount ? transactionAccount.value : 'general';
+    const target = transactionTarget ? transactionTarget.value : '';
+    const type = typeSelect ? typeSelect.value : 'expense';
+    
+    if (target && target !== '') {
+        transferInfo.style.display = 'block';
+        const sourceName = getAccountName(source);
+        const targetName = getAccountName(target);
+        if (type === 'expense') {
+            transferInfoText.textContent = `💸 Dépense : ${sourceName} → ${targetName} (débit sur source, crédit sur cible)`;
+        } else {
+            transferInfoText.textContent = `💰 Revenu : ${sourceName} → ${targetName} (crédit sur source, débit sur cible)`;
+        }
+    } else {
+        transferInfo.style.display = 'none';
+    }
+}
+
+function updateAccountFilter() {
+    const select = document.getElementById('filterAccount');
+    if (!select) return;
+    const current = select.value;
+    let html = '<option value="">Tous</option>';
+    html += '<option value="general">📊 Compte général</option>';
+    bankAccounts.forEach(acc => {
+        const selected = current === acc.id ? 'selected' : '';
+        html += `<option value="${acc.id}" ${selected}>🏦 ${escapeHtml(acc.name)}</option>`;
+    });
+    select.innerHTML = html;
+    if (current && bankAccounts.some(a => a.id === current)) {
+        select.value = current;
+    }
 }
 
 // ===== BUDGETS =====
@@ -251,6 +429,7 @@ function getFilteredTransactions() {
     if (f.type) filtered = filtered.filter(t => t.type === f.type);
     if (f.minAmount) filtered = filtered.filter(t => t.amount >= f.minAmount);
     if (f.maxAmount) filtered = filtered.filter(t => t.amount <= f.maxAmount);
+    if (f.account) filtered = filtered.filter(t => t.account === f.account || t.target === f.account);
     return filtered;
 }
 
@@ -261,6 +440,7 @@ function applyAdvancedFilters() {
     advancedFilters.type = document.getElementById('filterType').value;
     advancedFilters.minAmount = parseFloat(document.getElementById('filterMinAmount').value) || null;
     advancedFilters.maxAmount = parseFloat(document.getElementById('filterMaxAmount').value) || null;
+    advancedFilters.account = document.getElementById('filterAccount').value || null;
     fullRefresh();
 }
 
@@ -271,7 +451,8 @@ function resetAdvancedFilters() {
     document.getElementById('filterType').value = '';
     document.getElementById('filterMinAmount').value = '';
     document.getElementById('filterMaxAmount').value = '';
-    advancedFilters = { dateFrom: null, dateTo: null, category: null, type: null, minAmount: null, maxAmount: null };
+    document.getElementById('filterAccount').value = '';
+    advancedFilters = { dateFrom: null, dateTo: null, category: null, type: null, minAmount: null, maxAmount: null, account: null };
     fullRefresh();
 }
 
@@ -451,14 +632,20 @@ function renderTransactionList() {
     filtered.forEach(t => {
         const amountClass = t.type === 'expense' ? 'amount-expense' : 'amount-revenue';
         const recurringBadge = t.recurring ? '<span class="recurring-badge">🔄</span>' : '';
+        const transferBadge = t.isTransfer ? '<span class="transfer-badge">↔</span>' : '';
+        const accountDisplay = t.account && t.account !== 'general' ? 
+            `🏦 ${escapeHtml(bankAccounts.find(a => a.id === t.account)?.name || t.account)}` : '📊 Général';
+        const targetDisplay = t.target && t.target !== 'general' && t.target !== '' ? 
+            `→ 🏦 ${escapeHtml(bankAccounts.find(a => a.id === t.target)?.name || t.target)}` : '';
         html += `
             <div class="transaction-item" data-id="${t.id}">
                 <div class="drag-area ${currentSortMode !== 'manual' ? 'disabled' : ''}"><i class="fas fa-grip-vertical"></i></div>
                 <div class="transaction-info">
-                    <span class="transaction-desc">${escapeHtml(t.description)} ${recurringBadge}</span>
+                    <span class="transaction-desc">${escapeHtml(t.description)} ${recurringBadge} ${transferBadge}</span>
                     <span class="transaction-category">${escapeHtml(t.category || 'Non catégorisé')}</span>
                     <span class="transaction-amount ${amountClass}">${formatAmountWithSettings(t.amount, t.type)}</span>
                     <span class="transaction-date">${t.date || ''}</span>
+                    <span class="transaction-account" style="font-size:0.65rem; color:var(--text-secondary);">${accountDisplay} ${targetDisplay}</span>
                 </div>
                 <div class="transaction-actions">
                     <button class="action-btn edit" data-id="${t.id}"><i class="fas fa-pen"></i></button>
@@ -501,13 +688,25 @@ function duplicateTransactionById(id) {
         id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
         description: original.description,
         amount: original.amount,
-        category: original.category,
+        category: original.category || '',
         type: original.type,
         date: new Date().toISOString().slice(0, 10),
-        recurring: original.recurring || false
+        recurring: original.recurring || false,
+        account: original.account || 'general',
+        source: original.source || 'general',
+        target: original.target || '',
+        isTransfer: original.isTransfer || false,
+        linkedId: original.linkedId || null
     };
     transactions.push(newT);
+    if (newT.account !== 'general') {
+        updateBankAccountBalance(newT.account);
+    }
+    if (newT.target && newT.target !== 'general') {
+        updateBankAccountBalance(newT.target);
+    }
     fullRefresh();
+    renderBankAccounts();
     alert('Transaction dupliquée.');
 }
 
@@ -544,9 +743,25 @@ function initSortable() {
 // ===== CRUD =====
 function deleteTransactionById(id) {
     if (!confirm('Supprimer cette transaction ?')) return;
-    transactions = transactions.filter(t => t.id !== id);
+    const transaction = transactions.find(t => t.id === id);
+    if (!transaction) return;
+    
+    if (transaction.linkedId) {
+        const linked = transactions.find(t => t.id === transaction.linkedId);
+        transactions = transactions.filter(t => t.id !== transaction.id && t.id !== transaction.linkedId);
+        if (transaction.account !== 'general') updateBankAccountBalance(transaction.account);
+        if (transaction.target && transaction.target !== 'general') updateBankAccountBalance(transaction.target);
+        if (linked && linked.account !== 'general') updateBankAccountBalance(linked.account);
+        if (linked && linked.target && linked.target !== 'general') updateBankAccountBalance(linked.target);
+    } else {
+        transactions = transactions.filter(t => t.id !== id);
+        if (transaction.account !== 'general') updateBankAccountBalance(transaction.account);
+        if (transaction.target && transaction.target !== 'general') updateBankAccountBalance(transaction.target);
+    }
+    
     if (selectedTransactionId === id) selectTransaction(null);
     fullRefresh();
+    renderBankAccounts();
 }
 
 function openAddModal() {
@@ -554,24 +769,45 @@ function openAddModal() {
     if (modalTitle) modalTitle.textContent = 'Ajouter une transaction';
     if (descInput) descInput.value = '';
     if (amountInput) amountInput.value = '';
-    if (categoryInput) categoryInput.value = '';
     if (typeSelect) typeSelect.value = 'expense';
-    if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
     if (recurringCheckbox) recurringCheckbox.checked = false;
+    
+    updateTransactionSelects();
+    if (transactionAccount) transactionAccount.value = 'general';
+    if (transactionTarget) transactionTarget.value = '';
+    
     if (modalOverlay) modalOverlay.classList.add('active');
 }
 
 function openEditModal(id) {
     const t = transactions.find(tx => tx.id === id);
     if (!t) return;
-    currentEditId = id;
+    
+    const isLinked = t.linkedId && t.isTransfer;
+    let mainTx = t;
+    
+    if (isLinked) {
+        const linked = transactions.find(tx => tx.id === t.linkedId);
+        if (linked) {
+            mainTx = t.type === 'expense' ? t : linked;
+        }
+    }
+    
+    currentEditId = mainTx.id;
     if (modalTitle) modalTitle.textContent = 'Modifier la transaction';
-    if (descInput) descInput.value = t.description;
-    if (amountInput) amountInput.value = t.amount;
-    if (categoryInput) categoryInput.value = t.category || '';
-    if (typeSelect) typeSelect.value = t.type;
-    if (dateInput) dateInput.value = t.date || new Date().toISOString().slice(0, 10);
-    if (recurringCheckbox) recurringCheckbox.checked = t.recurring || false;
+    if (descInput) descInput.value = mainTx.description;
+    if (amountInput) amountInput.value = mainTx.amount;
+    if (typeSelect) typeSelect.value = mainTx.type;
+    if (recurringCheckbox) recurringCheckbox.checked = mainTx.recurring || false;
+    
+    updateTransactionSelects();
+    if (transactionAccount) {
+        transactionAccount.value = mainTx.source || mainTx.account || 'general';
+    }
+    if (transactionTarget) {
+        transactionTarget.value = mainTx.target || '';
+    }
+    
     if (modalOverlay) modalOverlay.classList.add('active');
 }
 
@@ -584,23 +820,81 @@ function handleFormSubmit(e) {
     e.preventDefault();
     const description = descInput ? descInput.value.trim() : '';
     const amount = amountInput ? parseFloat(amountInput.value) : 0;
-    const category = categoryInput ? categoryInput.value.trim() || 'Divers' : 'Divers';
     const type = typeSelect ? typeSelect.value : 'expense';
-    let date = dateInput ? dateInput.value : '';
-    if (!date) date = new Date().toISOString().slice(0, 10);
     const recurring = recurringCheckbox ? recurringCheckbox.checked : false;
-    if (!description || !amount || amount <= 0) return alert('Veuillez remplir tous les champs.');
-    if (currentEditId === null) {
-        transactions.push({ 
-            id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6), 
-            description, amount, category, type, date, recurring 
-        });
-    } else {
-        const idx = transactions.findIndex(tx => tx.id === currentEditId);
-        if (idx !== -1) transactions[idx] = { ...transactions[idx], description, amount, category, type, date, recurring };
+    const source = transactionAccount ? transactionAccount.value : 'general';
+    const target = transactionTarget ? transactionTarget.value : '';
+    
+    if (!description || !amount || amount <= 0) {
+        return alert('Veuillez remplir tous les champs.');
     }
+    
+    if (target && target !== '') {
+        const tx1 = {
+            id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
+            description: type === 'expense' 
+                ? `${description} (vers ${getAccountName(target)})` 
+                : `${description} (depuis ${getAccountName(target)})`,
+            amount: amount,
+            category: '',
+            type: type,
+            date: new Date().toISOString().slice(0, 10),
+            recurring: recurring,
+            account: source,
+            source: source,
+            target: target,
+            isTransfer: true,
+            linkedId: null
+        };
+        
+        const tx2 = {
+            id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
+            description: type === 'expense'
+                ? `${description} (depuis ${getAccountName(source)})`
+                : `${description} (vers ${getAccountName(source)})`,
+            amount: amount,
+            category: '',
+            type: type === 'expense' ? 'revenue' : 'expense',
+            date: new Date().toISOString().slice(0, 10),
+            recurring: recurring,
+            account: target,
+            source: source,
+            target: target,
+            isTransfer: true,
+            linkedId: null
+        };
+        
+        tx1.linkedId = tx2.id;
+        tx2.linkedId = tx1.id;
+        
+        transactions.push(tx1);
+        transactions.push(tx2);
+        
+        if (source !== 'general') updateBankAccountBalance(source);
+        if (target !== 'general') updateBankAccountBalance(target);
+        
+    } else {
+        const newTx = {
+            id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
+            description: description,
+            amount: amount,
+            category: '',
+            type: type,
+            date: new Date().toISOString().slice(0, 10),
+            recurring: recurring,
+            account: source,
+            source: source,
+            target: '',
+            isTransfer: false,
+            linkedId: null
+        };
+        transactions.push(newTx);
+        if (source !== 'general') updateBankAccountBalance(source);
+    }
+    
     closeModal();
     fullRefresh();
+    renderBankAccounts();
 }
 
 // ===== COMPTES ÉPARGNE =====
@@ -618,36 +912,44 @@ function saveSavingsAccounts() {
     localStorage.setItem('savingsAccounts', JSON.stringify(savingsAccounts));
 }
 
-function addOperationToHistory(accountId, type, amount, description) {
-    const acc = savingsAccounts.find(a => a.id === accountId);
-    if (!acc) return;
-    acc.history.unshift({ id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6), date: new Date().toISOString(), type, amount, description: description || '' });
-    if (acc.history.length > 100) acc.history = acc.history.slice(0, 100);
-    saveSavingsAccounts();
-}
-
-function deleteOperationFromHistory(accountId, opId) {
-    const acc = savingsAccounts.find(a => a.id === accountId);
-    if (!acc) return;
-    const op = acc.history.find(o => o.id === opId);
-    if (!op) return;
-    acc.balance += op.type === 'credit' ? -op.amount : op.amount;
-    acc.history = acc.history.filter(o => o.id !== opId);
-    saveSavingsAccounts();
-    renderSavingsAccounts();
-    renderDashboard();
-}
-
 function renderSavingsAccounts() {
     const container = document.getElementById('savingsAccountsList');
     if (!container) return;
-    if (savingsAccounts.length === 0) {
-        container.innerHTML = '<div class="empty-savings">Aucun compte épargne.</div>';
+    
+    const savingsTypes = ['livret', 'pel', 'lds', 'epargne'];
+    const savingsBankAccounts = bankAccounts.filter(acc => savingsTypes.includes(acc.type));
+    
+    let allSavings = [...savingsAccounts];
+    
+    savingsBankAccounts.forEach(bankAcc => {
+        const exists = allSavings.some(s => s.id === bankAcc.id || s.name === bankAcc.name);
+        if (!exists) {
+            allSavings.push({
+                id: bankAcc.id,
+                name: bankAcc.name,
+                balance: bankAcc.balance,
+                history: [],
+                isBankAccount: true,
+                bankType: bankAcc.type,
+                institution: bankAcc.institution
+            });
+        } else {
+            const existing = allSavings.find(s => s.id === bankAcc.id);
+            if (existing) {
+                existing.balance = bankAcc.balance;
+                existing.institution = bankAcc.institution;
+            }
+        }
+    });
+    
+    if (allSavings.length === 0) {
+        container.innerHTML = '<div class="empty-savings">Aucun compte épargne. Créez un compte de type "Livret", "PEL" ou "LDD" dans "Comptes bancaires".</div>';
         updateSavingsStats();
         return;
     }
+    
     let html = '', total = 0, totalInterest = 0, goalsAchieved = 0, totalGoals = 0;
-    savingsAccounts.forEach(acc => {
+    allSavings.forEach(acc => {
         total += acc.balance;
         
         let interest = 0;
@@ -685,44 +987,62 @@ function renderSavingsAccounts() {
         }
         
         const count = acc.history ? acc.history.length : 0;
+        const typeLabel = acc.bankType ? getBankTypeLabel(acc.bankType) : '🏦 Épargne';
+        const institutionDisplay = acc.institution ? ` • ${escapeHtml(acc.institution)}` : '';
+        
         html += `
             <div class="savings-account-card" data-id="${acc.id}">
                 <div class="savings-account-info">
                     <span class="savings-account-name">${escapeHtml(acc.name)}</span>
                     <span class="savings-account-balance ${acc.balance >= 0 ? 'positive' : 'negative'}">${acc.balance >= 0 ? '+' : ''}${acc.balance.toFixed(2)} ${appSettings.currency}</span>
                 </div>
+                <div class="savings-account-type">${typeLabel}${institutionDisplay}</div>
                 ${goalStatus}
                 <div class="savings-account-actions">
-                    <button class="operation" data-id="${acc.id}"><i class="fas fa-exchange-alt"></i> Opération</button>
+                    <button class="operation" data-id="${acc.id}"><i class="fas fa-eye"></i> Détail</button>
                     <button class="history" data-id="${acc.id}"><i class="fas fa-history"></i> Hist. (${count})</button>
                     <button class="goal-btn" data-id="${acc.id}"><i class="fas fa-bullseye"></i> Objectif</button>
-                    <button class="transfer-btn" data-id="${acc.id}"><i class="fas fa-arrow-right-arrow-left"></i> Transfert</button>
-                    <button class="delete-savings" data-id="${acc.id}"><i class="fas fa-trash"></i></button>
+                    ${acc.isBankAccount ? '' : `<button class="delete-savings" data-id="${acc.id}"><i class="fas fa-trash"></i></button>`}
                 </div>
             </div>
         `;
     });
+    
     container.innerHTML = html;
     updateSavingsStats(total, totalInterest, goalsAchieved, totalGoals);
     
-    document.querySelectorAll('.operation').forEach(btn => btn.addEventListener('click', () => openSavingsOperationModal(btn.dataset.id)));
-    document.querySelectorAll('.history').forEach(btn => btn.addEventListener('click', () => { currentHistoryAccountId = btn.dataset.id; showHistoryModal(currentHistoryAccountId); }));
+    document.querySelectorAll('.operation').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            const isBank = bankAccounts.some(a => a.id === id);
+            openAccountDetailModal(id, isBank ? 'bank' : 'savings');
+        });
+    });
+    
+    document.querySelectorAll('.history').forEach(btn => btn.addEventListener('click', () => { 
+        currentHistoryAccountId = btn.dataset.id; 
+        showHistoryModal(currentHistoryAccountId); 
+    }));
+    
     document.querySelectorAll('.goal-btn').forEach(btn => btn.addEventListener('click', () => openGoalModal(btn.dataset.id)));
     document.querySelectorAll('.transfer-btn').forEach(btn => btn.addEventListener('click', () => openTransferModal(btn.dataset.id)));
+    
     document.querySelectorAll('.delete-savings').forEach(btn => btn.addEventListener('click', () => {
-        if (confirm('Supprimer ce compte ?')) {
+        if (confirm('Supprimer ce compte épargne ?')) {
             savingsAccounts = savingsAccounts.filter(a => a.id !== btn.dataset.id);
             saveSavingsAccounts();
             renderSavingsAccounts();
             renderDashboard();
         }
     }));
+    
     document.querySelectorAll('.goal-remove').forEach(btn => btn.addEventListener('click', () => {
         if (confirm('Supprimer cet objectif ?')) {
             const acc = savingsAccounts.find(a => a.id === btn.dataset.account);
             if (acc) { acc.goal = null; saveSavingsAccounts(); renderSavingsAccounts(); }
         }
     }));
+    
     renderDashboard();
 }
 
@@ -730,7 +1050,18 @@ function updateSavingsStats(total, totalInterest, goalsAchieved, totalGoals) {
     const totalSavingsEl = document.getElementById('totalSavings');
     const totalInterestEl = document.getElementById('totalInterest');
     const goalsAchievedEl = document.getElementById('goalsAchieved');
-    if (totalSavingsEl) totalSavingsEl.textContent = `${(total || 0).toFixed(2)} ${appSettings.currency}`;
+    
+    const savingsTypes = ['livret', 'pel', 'lds', 'epargne'];
+    let bankSavingsTotal = 0;
+    bankAccounts.forEach(acc => {
+        if (savingsTypes.includes(acc.type)) {
+            bankSavingsTotal += acc.balance;
+        }
+    });
+    
+    const totalValue = (total || 0) + bankSavingsTotal;
+    
+    if (totalSavingsEl) totalSavingsEl.textContent = `${totalValue.toFixed(2)} ${appSettings.currency}`;
     if (totalInterestEl) totalInterestEl.textContent = `${(totalInterest || 0).toFixed(2)} ${appSettings.currency}`;
     if (goalsAchievedEl) {
         const goalsText = totalGoals > 0 ? `${goalsAchieved || 0}/${totalGoals}` : '0/0';
@@ -780,6 +1111,29 @@ function handleSavingsOperationSubmit(e) {
     renderSavingsAccounts();
     const modal = document.getElementById('savingsOperationModal');
     if (modal) modal.classList.remove('active');
+}
+
+function addOperationToHistory(accountId, type, amount, description) {
+    const acc = savingsAccounts.find(a => a.id === accountId);
+    if (!acc) return;
+    acc.history.unshift({ id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6), date: new Date().toISOString(), type, amount, description: description || '' });
+    if (acc.history.length > 100) acc.history = acc.history.slice(0, 100);
+    saveSavingsAccounts();
+}
+
+function deleteOperationFromHistory(accountId, opId) {
+    const acc = savingsAccounts.find(a => a.id === accountId);
+    if (!acc) return;
+    const op = acc.history.find(o => o.id === opId);
+    if (!op) return;
+    acc.balance += op.type === 'credit' ? -op.amount : op.amount;
+    acc.history = acc.history.filter(o => o.id !== opId);
+    saveSavingsAccounts();
+    renderSavingsAccounts();
+    renderDashboard();
+    if (document.getElementById('accountDetailModal').classList.contains('active') && currentDetailAccountId === accountId) {
+        renderAccountDetail();
+    }
 }
 
 function showHistoryModal(id) {
@@ -934,132 +1288,15 @@ function renderDashboard() {
     }).join('');
 }
 
-// ===== TRANSACTIONS RÉCURRENTES =====
-function getRecurringTransactions() {
-    return transactions.filter(t => t.recurring === true);
-}
-
-function toggleRecurringStatus(id) {
-    const t = transactions.find(tx => tx.id === id);
-    if (t) {
-        t.recurring = !t.recurring;
-        saveToLocalStorage();
-        fullRefresh();
-        renderRecurringList();
-    }
-}
-
-function renderRecurringList() {
-    const container = document.getElementById('recurringList');
-    if (!container) return;
-    const recurring = getRecurringTransactions();
-    const countSpan = document.getElementById('recurringCount');
-    if (countSpan) {
-        countSpan.textContent = `${recurring.length} transaction(s)`;
-    }
-    if (recurring.length === 0) {
-        container.innerHTML = '<div class="empty-cats">Aucune transaction récurrente. Cochez "Transaction récurrente" dans une transaction pour l\'ajouter ici.</div>';
-        return;
-    }
-    let html = '';
-    recurring.forEach(t => {
-        const amountClass = t.type === 'expense' ? 'negative' : 'positive';
-        const amountSign = t.type === 'expense' ? '-' : '+';
-        html += `
-            <div class="recurring-item" data-id="${t.id}">
-                <span class="recurring-desc">${escapeHtml(t.description)}</span>
-                <span class="recurring-category">${escapeHtml(t.category || 'Non catégorisé')}</span>
-                <span class="recurring-date">${t.date || ''}</span>
-                <span class="recurring-amount ${amountClass}">${amountSign} ${t.amount.toFixed(2)} ${appSettings.currency}</span>
-                <button class="recurring-toggle" data-id="${t.id}" title="Retirer des récurrentes">✕</button>
-            </div>
-        `;
-    });
-    container.innerHTML = html;
-    document.querySelectorAll('.recurring-toggle').forEach(btn => {
-        btn.addEventListener('click', () => {
-            toggleRecurringStatus(btn.dataset.id);
-        });
-    });
-}
-
-// ===== DÉPENSES RÉCURRENTES AUTOMATISÉES =====
-function processRecurringTransactions() {
-    const today = new Date();
-    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-    const processedKey = `recurring_processed_${currentMonth}`;
-    
-    if (localStorage.getItem(processedKey) === 'true') {
-        console.log('Transactions récurrentes déjà traitées pour ce mois');
-        return;
-    }
-    
-    const recurring = transactions.filter(t => t.recurring === true);
-    if (recurring.length === 0) return;
-    
-    let count = 0;
-    recurring.forEach(t => {
-        const day = t.date ? t.date.substring(8, 10) : '01';
-        const newDate = `${currentMonth}-${day}`;
-        const exists = transactions.some(tr => 
-            tr.description === t.description && 
-            tr.amount === t.amount && 
-            tr.type === t.type &&
-            tr.date === newDate
-        );
-        if (!exists) {
-            transactions.push({
-                id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
-                description: t.description,
-                amount: t.amount,
-                category: t.category,
-                type: t.type,
-                date: newDate,
-                recurring: true,
-                autoCreated: true
-            });
-            count++;
-        }
-    });
-    
-    if (count > 0) {
-        saveToLocalStorage();
-        fullRefresh();
-        console.log(`${count} transaction(s) récurrente(s) créée(s) pour ${currentMonth}`);
-    }
-    
-    localStorage.setItem(processedKey, 'true');
-}
-
-function forceProcessRecurring() {
-    const month = new Date().toISOString().slice(0, 7);
-    const key = `recurring_processed_${month}`;
-    localStorage.removeItem(key);
-    processRecurringTransactions();
-    renderRecurringList();
-    alert('Transactions récurrentes traitées !');
-}
-
-function checkRecurringTransactions() {
-    processRecurringTransactions();
-}
-
-// ===== COMPTES BANCAIRES =====
-function loadBankAccounts() {
-    const stored = localStorage.getItem('bankAccounts');
-    bankAccounts = stored ? JSON.parse(stored) : [];
-}
-
-function saveBankAccounts() {
-    localStorage.setItem('bankAccounts', JSON.stringify(bankAccounts));
-}
-
+// ===== COMPTES BANCAIRES - RENDU =====
 function renderBankAccounts() {
     const container = document.getElementById('bankAccountsList');
     if (!container) return;
     if (bankAccounts.length === 0) {
         container.innerHTML = '<div class="empty-bank">Aucun compte bancaire. Cliquez sur "Nouveau compte" pour commencer.</div>';
         updateBankStats();
+        updateTransactionSelects();
+        updateAccountFilter();
         return;
     }
     let html = '';
@@ -1067,16 +1304,18 @@ function renderBankAccounts() {
     bankAccounts.forEach(acc => {
         total += acc.balance;
         const balanceClass = acc.balance >= 0 ? 'positive' : 'negative';
+        const typeLabel = getBankTypeLabel(acc.type);
         html += `
             <div class="bank-account-card" data-id="${acc.id}">
                 <div class="bank-account-header">
                     <span class="bank-account-name">${escapeHtml(acc.name)}</span>
-                    <span class="bank-account-type">${getBankTypeLabel(acc.type)}</span>
+                    <span class="bank-account-type">${typeLabel}</span>
                 </div>
                 <div class="bank-account-balance ${balanceClass}">${acc.balance >= 0 ? '+' : ''}${acc.balance.toFixed(2)} ${appSettings.currency}</div>
                 <div class="bank-account-institution">${escapeHtml(acc.institution || '')}</div>
                 <div class="bank-account-actions">
-                    <button class="op-btn" data-id="${acc.id}"><i class="fas fa-exchange-alt"></i> Opération</button>
+                    <button class="edit-bank" data-id="${acc.id}"><i class="fas fa-pen"></i> Modifier</button>
+                    <button class="op-btn" data-id="${acc.id}"><i class="fas fa-eye"></i> Détail</button>
                     <button class="delete-bank" data-id="${acc.id}"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
@@ -1084,9 +1323,17 @@ function renderBankAccounts() {
     });
     container.innerHTML = html;
     updateBankStats(total);
+    updateTransactionSelects();
+    updateAccountFilter();
     
+    document.querySelectorAll('.edit-bank').forEach(btn => {
+        btn.addEventListener('click', () => openEditBankModal(btn.dataset.id));
+    });
     document.querySelectorAll('.op-btn').forEach(btn => {
-        btn.addEventListener('click', () => openBankOperationModal(btn.dataset.id));
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            openAccountDetailModal(id, 'bank');
+        });
     });
     document.querySelectorAll('.delete-bank').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1099,17 +1346,6 @@ function renderBankAccounts() {
     });
 }
 
-function getBankTypeLabel(type) {
-    const labels = {
-        courant: '💳 Compte courant',
-        livret: '🏦 Livret',
-        pel: '📈 PEL',
-        lds: '🏦 LDD',
-        autre: '📁 Autre'
-    };
-    return labels[type] || type;
-}
-
 function updateBankStats(total) {
     const totalEl = document.getElementById('totalBankBalance');
     const countEl = document.getElementById('bankCount');
@@ -1118,42 +1354,59 @@ function updateBankStats(total) {
 }
 
 function openAddBankModal() {
-    const modalTitle = document.getElementById('bankModalTitle');
-    const name = document.getElementById('bankName');
-    const type = document.getElementById('bankType');
-    const balance = document.getElementById('bankInitialBalance');
-    const institution = document.getElementById('bankInstitution');
-    if (modalTitle) modalTitle.textContent = 'Ajouter un compte bancaire';
-    if (name) name.value = '';
-    if (type) type.value = 'courant';
-    if (balance) balance.value = '0';
-    if (institution) institution.value = '';
-    const modal = document.getElementById('bankAccountModal');
-    if (modal) modal.classList.add('active');
+    document.getElementById('editBankAccountId').value = '';
+    document.getElementById('bankModalTitle').textContent = 'Ajouter un compte bancaire';
+    document.getElementById('bankName').value = '';
+    document.getElementById('bankType').value = 'courant';
+    document.getElementById('bankInstitution').value = '';
+    document.getElementById('bankAccountModal').classList.add('active');
+}
+
+function openEditBankModal(accountId) {
+    const acc = bankAccounts.find(a => a.id === accountId);
+    if (!acc) return;
+    
+    document.getElementById('editBankAccountId').value = accountId;
+    document.getElementById('bankModalTitle').textContent = 'Modifier le compte bancaire';
+    document.getElementById('bankName').value = acc.name;
+    document.getElementById('bankType').value = acc.type;
+    document.getElementById('bankInstitution').value = acc.institution || '';
+    document.getElementById('bankAccountModal').classList.add('active');
 }
 
 function handleBankFormSubmit(e) {
     e.preventDefault();
+    const editId = document.getElementById('editBankAccountId').value;
     const name = document.getElementById('bankName');
     const type = document.getElementById('bankType');
-    const balance = document.getElementById('bankInitialBalance');
     const institution = document.getElementById('bankInstitution');
     const nameVal = name ? name.value.trim() : '';
     const typeVal = type ? type.value : 'courant';
-    const balanceVal = balance ? parseFloat(balance.value) || 0 : 0;
     const institutionVal = institution ? institution.value.trim() : '';
+    
     if (!nameVal) return alert('Veuillez donner un nom au compte.');
-    bankAccounts.push({
-        id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
-        name: nameVal,
-        type: typeVal,
-        balance: balanceVal,
-        institution: institutionVal
-    });
+    
+    if (editId) {
+        const acc = bankAccounts.find(a => a.id === editId);
+        if (acc) {
+            acc.name = nameVal;
+            acc.type = typeVal;
+            acc.institution = institutionVal;
+        }
+    } else {
+        bankAccounts.push({
+            id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
+            name: nameVal,
+            type: typeVal,
+            balance: 0,
+            institution: institutionVal
+        });
+    }
+    
     saveBankAccounts();
+    updateAllBankAccountsBalances();
     renderBankAccounts();
-    const modal = document.getElementById('bankAccountModal');
-    if (modal) modal.classList.remove('active');
+    document.getElementById('bankAccountModal').classList.remove('active');
 }
 
 function openBankOperationModal(accountId) {
@@ -1216,18 +1469,406 @@ function handleBankOperationSubmit(e) {
     if (modal) modal.classList.remove('active');
 }
 
-// Gestionnaire pour l'affichage du champ de virement
-document.addEventListener('DOMContentLoaded', function() {
-    const bankOpType = document.getElementById('bankOpType');
-    if (bankOpType) {
-        bankOpType.addEventListener('change', function() {
-            const group = document.getElementById('bankTransferTargetGroup');
-            if (group) {
-                group.style.display = this.value === 'transfer' ? 'block' : 'none';
-            }
-        });
+// ===== MODALE DÉTAIL COMPTE =====
+function openAccountDetailModal(accountId, type) {
+    currentDetailAccountId = accountId;
+    currentDetailAccountType = type;
+    
+    document.getElementById('accFilterDateFrom').value = '';
+    document.getElementById('accFilterDateTo').value = '';
+    document.getElementById('accFilterType').value = '';
+    document.getElementById('accFilterMinAmount').value = '';
+    document.getElementById('accFilterMaxAmount').value = '';
+    document.getElementById('accFilterSearch').value = '';
+    detailFilters = { dateFrom: null, dateTo: null, type: null, minAmount: null, maxAmount: null, search: null };
+    
+    renderAccountDetail();
+    document.getElementById('accountDetailModal').classList.add('active');
+}
+
+function getAccountDetailData() {
+    if (currentDetailAccountType === 'savings') {
+        const acc = savingsAccounts.find(a => a.id === currentDetailAccountId);
+        if (!acc) return null;
+        return {
+            name: acc.name,
+            balance: acc.balance,
+            transactions: acc.history || []
+        };
+    } else if (currentDetailAccountType === 'bank') {
+        const acc = bankAccounts.find(a => a.id === currentDetailAccountId);
+        if (!acc) return null;
+        const tx = transactions.filter(t => t.account === currentDetailAccountId || t.target === currentDetailAccountId);
+        const history = tx.map(t => ({
+            id: t.id,
+            date: t.date,
+            type: t.type === 'revenue' ? 'credit' : 'debit',
+            amount: t.amount,
+            description: t.description,
+            category: t.category || 'Non catégorisé'
+        }));
+        return {
+            name: acc.name,
+            balance: acc.balance,
+            transactions: history
+        };
     }
-});
+    return null;
+}
+
+function renderAccountDetail() {
+    const data = getAccountDetailData();
+    if (!data) return;
+    
+    document.getElementById('accountDetailTitle').textContent = `📊 Détail du compte - ${data.name}`;
+    const balanceEl = document.getElementById('accountDetailBalance');
+    balanceEl.textContent = `${data.balance >= 0 ? '+' : ''}${data.balance.toFixed(2)} ${appSettings.currency}`;
+    balanceEl.className = `account-detail-balance ${data.balance < 0 ? 'negative' : ''}`;
+    
+    let transactions = data.transactions;
+    const f = detailFilters;
+    if (f.dateFrom) transactions = transactions.filter(t => t.date >= f.dateFrom);
+    if (f.dateTo) transactions = transactions.filter(t => t.date <= f.dateTo);
+    if (f.type) transactions = transactions.filter(t => t.type === f.type);
+    if (f.minAmount) transactions = transactions.filter(t => t.amount >= f.minAmount);
+    if (f.maxAmount) transactions = transactions.filter(t => t.amount <= f.maxAmount);
+    if (f.search) {
+        const search = f.search.toLowerCase();
+        transactions = transactions.filter(t => 
+            t.description.toLowerCase().includes(search) || 
+            (t.category && t.category.toLowerCase().includes(search))
+        );
+    }
+    
+    transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    const tbody = document.getElementById('accDetailTableBody');
+    if (transactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--empty-color);">Aucune transaction trouvée</td></tr>';
+    } else {
+        let html = '';
+        transactions.forEach(t => {
+            const typeIcon = t.type === 'credit' ? '💰' : '💸';
+            const typeClass = t.type === 'credit' ? 'credit' : 'debit';
+            const amountSign = t.type === 'credit' ? '+' : '-';
+            const dateFormatted = formatDate(t.date);
+            html += `
+                <tr>
+                    <td>${dateFormatted}</td>
+                    <td class="${typeClass}">${typeIcon} ${t.type === 'credit' ? 'Crédit' : 'Débit'}</td>
+                    <td class="${typeClass}">${amountSign} ${t.amount.toFixed(2)} ${appSettings.currency}</td>
+                    <td>${escapeHtml(t.description || '')}</td>
+                    <td>${escapeHtml(t.category || '')}</td>
+                    <td>
+                        ${currentDetailAccountType === 'savings' ? 
+                            `<button class="delete-op" data-id="${t.id}" title="Supprimer"><i class="fas fa-trash-alt"></i></button>` : 
+                            ''}
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+        
+        if (currentDetailAccountType === 'savings') {
+            document.querySelectorAll('#accDetailTableBody .delete-op').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const opId = btn.dataset.id;
+                    if (confirm('Supprimer cette opération ?')) {
+                        deleteOperationFromHistory(currentDetailAccountId, opId);
+                        renderAccountDetail();
+                        renderSavingsAccounts();
+                    }
+                });
+            });
+        }
+    }
+    
+    let totalCredits = 0, totalDebits = 0;
+    transactions.forEach(t => {
+        if (t.type === 'credit') totalCredits += t.amount;
+        else totalDebits += t.amount;
+    });
+    document.getElementById('accTransactionCount').textContent = `${transactions.length} transaction(s)`;
+    document.getElementById('accTotalCredits').textContent = `+${totalCredits.toFixed(2)} ${appSettings.currency}`;
+    document.getElementById('accTotalDebits').textContent = `-${totalDebits.toFixed(2)} ${appSettings.currency}`;
+    const balance = totalCredits - totalDebits;
+    const balanceEl2 = document.getElementById('accTotalBalance');
+    balanceEl2.textContent = `${balance >= 0 ? '+' : ''}${balance.toFixed(2)} ${appSettings.currency}`;
+    balanceEl2.className = `stat-value ${balance >= 0 ? 'positive' : 'negative'}`;
+}
+
+function applyAccountFilters() {
+    detailFilters.dateFrom = document.getElementById('accFilterDateFrom').value || null;
+    detailFilters.dateTo = document.getElementById('accFilterDateTo').value || null;
+    detailFilters.type = document.getElementById('accFilterType').value || null;
+    detailFilters.minAmount = parseFloat(document.getElementById('accFilterMinAmount').value) || null;
+    detailFilters.maxAmount = parseFloat(document.getElementById('accFilterMaxAmount').value) || null;
+    detailFilters.search = document.getElementById('accFilterSearch').value || null;
+    renderAccountDetail();
+}
+
+function resetAccountFilters() {
+    document.getElementById('accFilterDateFrom').value = '';
+    document.getElementById('accFilterDateTo').value = '';
+    document.getElementById('accFilterType').value = '';
+    document.getElementById('accFilterMinAmount').value = '';
+    document.getElementById('accFilterMaxAmount').value = '';
+    document.getElementById('accFilterSearch').value = '';
+    detailFilters = { dateFrom: null, dateTo: null, type: null, minAmount: null, maxAmount: null, search: null };
+    renderAccountDetail();
+}
+
+function exportAccountDetailCSV() {
+    const data = getAccountDetailData();
+    if (!data) return;
+    let csv = 'Date;Type;Montant;Description;Catégorie\n';
+    data.transactions.forEach(t => {
+        csv += `${formatDate(t.date)};${t.type === 'credit' ? 'Crédit' : 'Débit'};${t.amount};"${t.description || ''}";"${t.category || ''}"\n`;
+    });
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `compte_${data.name}_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+}
+
+// ===== MODALE DÉTAIL DU JOUR (CALENDRIER) =====
+function openDayDetailModal(date) {
+    dayDetailDate = date;
+    const dateObj = new Date(date + 'T00:00:00');
+    const formattedDate = dateObj.toLocaleDateString('fr-FR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+    });
+    document.getElementById('dayDetailTitle').textContent = `📅 ${formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)}`;
+    
+    renderDayDetailModal(date);
+    document.getElementById('dayDetailModal').classList.add('active');
+}
+
+function closeDayDetailModal() {
+    document.getElementById('dayDetailModal').classList.remove('active');
+}
+
+function renderDayDetailModal(date) {
+    const tx = transactions.filter(t => t.date === date);
+    const balanceContainer = document.getElementById('dayDetailBalance');
+    const revenueContainer = document.getElementById('dayDetailRevenue');
+    const expenseContainer = document.getElementById('dayDetailExpense');
+    const transactionsContainer = document.getElementById('dayDetailTransactions');
+    
+    // Calculer le solde cumulé jusqu'à la date
+    let cumulative = appSettings.initialAmount || 0;
+    const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
+    let totalRev = 0, totalExp = 0;
+    
+    // Filtrer les transactions jusqu'à la date incluse
+    const txUntilDate = transactions.filter(t => t.date <= date);
+    txUntilDate.forEach(t => {
+        if (t.type === 'revenue') {
+            cumulative += t.amount;
+            if (t.date === date) totalRev += t.amount;
+        } else {
+            cumulative -= t.amount;
+            if (t.date === date) totalExp += t.amount;
+        }
+    });
+    
+    // Mettre à jour les statistiques
+    const balanceClass = cumulative >= 0 ? 'balance-positive' : 'balance-negative';
+    balanceContainer.textContent = `${cumulative >= 0 ? '+' : ''}${cumulative.toFixed(2)} ${appSettings.currency}`;
+    balanceContainer.className = `stat-value ${balanceClass}`;
+    
+    revenueContainer.textContent = `+${totalRev.toFixed(2)} ${appSettings.currency}`;
+    revenueContainer.className = 'stat-value positive';
+    
+    expenseContainer.textContent = `-${totalExp.toFixed(2)} ${appSettings.currency}`;
+    expenseContainer.className = 'stat-value negative';
+    
+    // Afficher les transactions
+    if (tx.length === 0) {
+        transactionsContainer.innerHTML = '<div class="empty-detail">Aucune transaction ce jour</div>';
+        return;
+    }
+    
+    let html = '';
+    const sortedTx = [...tx].sort((a, b) => {
+        if (a.type === 'revenue' && b.type === 'expense') return -1;
+        if (a.type === 'expense' && b.type === 'revenue') return 1;
+        return 0;
+    });
+    
+    sortedTx.forEach(t => {
+        const amountClass = t.type === 'revenue' ? 'positive' : 'negative';
+        const amountSign = t.type === 'revenue' ? '+' : '-';
+        const icon = t.type === 'revenue' ? '💰' : '💸';
+        const accountDisplay = t.account && t.account !== 'general' ? 
+            `🏦 ${escapeHtml(bankAccounts.find(a => a.id === t.account)?.name || t.account)}` : '📊 Général';
+        
+        html += `
+            <div class="day-transaction-item">
+                <div class="day-tx-left">
+                    <span class="day-tx-icon">${icon}</span>
+                    <span class="day-tx-desc">${escapeHtml(t.description)}</span>
+                </div>
+                <div class="day-tx-right">
+                    <span class="day-tx-category">${escapeHtml(t.category || 'Non catégorisé')}</span>
+                    <span class="day-tx-account" style="font-size: 0.65rem; color: var(--text-secondary);">${accountDisplay}</span>
+                    <span class="day-tx-amount ${amountClass}">${amountSign} ${t.amount.toFixed(2)} ${appSettings.currency}</span>
+                </div>
+            </div>
+        `;
+    });
+    
+    transactionsContainer.innerHTML = html;
+}
+
+// ===== TRANSACTIONS RÉCURRENTES =====
+function getRecurringTransactions() {
+    return transactions.filter(t => t.recurring === true);
+}
+
+function toggleRecurringStatus(id) {
+    const t = transactions.find(tx => tx.id === id);
+    if (t) {
+        t.recurring = !t.recurring;
+        saveToLocalStorage();
+        fullRefresh();
+        renderRecurringList();
+    }
+}
+
+function renderRecurringList() {
+    const container = document.getElementById('recurringList');
+    if (!container) return;
+    const recurring = getRecurringTransactions();
+    const countSpan = document.getElementById('recurringCount');
+    if (countSpan) {
+        countSpan.textContent = `${recurring.length} transaction(s)`;
+    }
+    if (recurring.length === 0) {
+        container.innerHTML = '<div class="empty-cats">Aucune transaction récurrente. Cochez "Transaction récurrente" dans une transaction pour l\'ajouter ici.</div>';
+        return;
+    }
+    let html = '';
+    recurring.forEach(t => {
+        const amountClass = t.type === 'expense' ? 'negative' : 'positive';
+        const amountSign = t.type === 'expense' ? '-' : '+';
+        const transferBadge = t.isTransfer ? ' ↔' : '';
+        html += `
+            <div class="recurring-item" data-id="${t.id}">
+                <span class="recurring-desc">${escapeHtml(t.description)}${transferBadge}</span>
+                <span class="recurring-category">${escapeHtml(t.category || 'Non catégorisé')}</span>
+                <span class="recurring-date">${t.date || ''}</span>
+                <span class="recurring-amount ${amountClass}">${amountSign} ${t.amount.toFixed(2)} ${appSettings.currency}</span>
+                <button class="recurring-toggle" data-id="${t.id}" title="Retirer des récurrentes">✕</button>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+    document.querySelectorAll('.recurring-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            toggleRecurringStatus(btn.dataset.id);
+        });
+    });
+}
+
+// ===== DÉPENSES RÉCURRENTES AUTOMATISÉES =====
+function processRecurringTransactions() {
+    const today = new Date();
+    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const processedKey = `recurring_processed_${currentMonth}`;
+    
+    if (localStorage.getItem(processedKey) === 'true') {
+        console.log('Transactions récurrentes déjà traitées pour ce mois');
+        return;
+    }
+    
+    const recurring = transactions.filter(t => t.recurring === true);
+    if (recurring.length === 0) return;
+    
+    let count = 0;
+    const accountsToUpdate = new Set();
+    recurring.forEach(t => {
+        const day = t.date ? t.date.substring(8, 10) : '01';
+        const newDate = `${currentMonth}-${day}`;
+        const exists = transactions.some(tr => 
+            tr.description === t.description && 
+            tr.amount === t.amount && 
+            tr.type === t.type &&
+            tr.date === newDate
+        );
+        if (!exists) {
+            const account = t.account || 'general';
+            const newTx = {
+                id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
+                description: t.description,
+                amount: t.amount,
+                category: t.category || '',
+                type: t.type,
+                date: newDate,
+                recurring: true,
+                account: account,
+                source: t.source || account,
+                target: t.target || '',
+                isTransfer: t.isTransfer || false,
+                linkedId: null,
+                autoCreated: true
+            };
+            if (t.isTransfer && t.target && t.target !== '') {
+                const tx2 = {
+                    id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
+                    description: t.type === 'expense'
+                        ? `${t.description} (depuis ${getAccountName(t.source || t.account)})`
+                        : `${t.description} (vers ${getAccountName(t.source || t.account)})`,
+                    amount: t.amount,
+                    category: '',
+                    type: t.type === 'expense' ? 'revenue' : 'expense',
+                    date: newDate,
+                    recurring: true,
+                    account: t.target,
+                    source: t.source || t.account,
+                    target: t.target,
+                    isTransfer: true,
+                    linkedId: null,
+                    autoCreated: true
+                };
+                newTx.linkedId = tx2.id;
+                tx2.linkedId = newTx.id;
+                transactions.push(tx2);
+                if (t.target !== 'general') accountsToUpdate.add(t.target);
+            }
+            transactions.push(newTx);
+            if (account !== 'general') accountsToUpdate.add(account);
+            count++;
+        }
+    });
+    
+    if (count > 0) {
+        accountsToUpdate.forEach(accId => updateBankAccountBalance(accId));
+        saveToLocalStorage();
+        fullRefresh();
+        renderBankAccounts();
+        console.log(`${count} transaction(s) récurrente(s) créée(s) pour ${currentMonth}`);
+    }
+    
+    localStorage.setItem(processedKey, 'true');
+}
+
+function forceProcessRecurring() {
+    const month = new Date().toISOString().slice(0, 7);
+    const key = `recurring_processed_${month}`;
+    localStorage.removeItem(key);
+    processRecurringTransactions();
+    renderRecurringList();
+    alert('Transactions récurrentes traitées !');
+}
+
+function checkRecurringTransactions() {
+    processRecurringTransactions();
+}
 
 // ===== CALENDRIER =====
 function renderCalendar() {
@@ -1269,14 +1910,24 @@ function renderCalendar() {
     });
     
     const dailyBalances = {};
+    const dailyExpenses = {};
+    const dailyRevenues = {};
     for (let d = 1; d <= daysInMonth; d++) {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         const tx = dayTransactions[dateStr] || [];
+        let dayExp = 0, dayRev = 0;
         tx.forEach(t => {
-            if (t.type === 'revenue') cumulative += t.amount;
-            else cumulative -= t.amount;
+            if (t.type === 'revenue') {
+                dayRev += t.amount;
+                cumulative += t.amount;
+            } else {
+                dayExp += t.amount;
+                cumulative -= t.amount;
+            }
         });
         dailyBalances[dateStr] = cumulative;
+        dailyExpenses[dateStr] = dayExp;
+        dailyRevenues[dateStr] = dayRev;
     }
     
     const calendarGrid = document.getElementById('calendarGrid');
@@ -1286,6 +1937,8 @@ function renderCalendar() {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         const tx = dayTransactions[dateStr] || [];
         const balance = dailyBalances[dateStr] || 0;
+        const expenses = dailyExpenses[dateStr] || 0;
+        const revenues = dailyRevenues[dateStr] || 0;
         const isToday = dateStr === todayStr;
         const isSelected = dateStr === calendarSelectedDate;
         
@@ -1298,11 +1951,24 @@ function renderCalendar() {
         
         const balanceClass = balance >= 0 ? 'positive' : 'negative';
         const balanceDisplay = `${balance >= 0 ? '+' : ''}${balance.toFixed(0)}`;
+        const expensesDisplay = expenses > 0 ? `-${expenses.toFixed(0)}` : '';
+        const revenuesDisplay = revenues > 0 ? `+${revenues.toFixed(0)}` : '';
+        
+        let dayInfo = '';
+        if (tx.length > 0) {
+            dayInfo = `<span class="day-balance ${balanceClass}">S: ${balanceDisplay}</span>`;
+            if (expenses > 0) {
+                dayInfo += `<span class="day-expense">D: ${expensesDisplay}</span>`;
+            }
+            if (revenues > 0 && expenses === 0) {
+                dayInfo += `<span class="day-revenue">R: ${revenuesDisplay}</span>`;
+            }
+        }
         
         html += `
             <div class="${classes}" data-date="${dateStr}">
                 <span class="day-number">${d}</span>
-                ${tx.length > 0 ? `<span class="day-balance ${balanceClass}">${balanceDisplay}</span>` : ''}
+                ${dayInfo ? `<div class="day-info">${dayInfo}</div>` : ''}
             </div>
         `;
     }
@@ -1314,13 +1980,14 @@ function renderCalendar() {
             const date = el.dataset.date;
             calendarSelectedDate = date;
             renderCalendar();
-            renderDayDetail(date);
+            openDayDetailModal(date);
         });
     });
     
     if (!calendarSelectedDate) {
         const todayStr = new Date().toISOString().slice(0, 10);
-        if (document.querySelector(`.calendar-day[data-date="${todayStr}"]`)) {
+        const todayInMonth = document.querySelector(`.calendar-day[data-date="${todayStr}"]`);
+        if (todayInMonth) {
             calendarSelectedDate = todayStr;
         } else {
             const firstTx = document.querySelector('.calendar-day.has-transaction');
@@ -1328,59 +1995,11 @@ function renderCalendar() {
         }
         if (calendarSelectedDate) {
             renderCalendar();
-            renderDayDetail(calendarSelectedDate);
+            openDayDetailModal(calendarSelectedDate);
         }
     } else {
-        renderDayDetail(calendarSelectedDate);
+        // Si déjà sélectionné, on ne refait pas la modale pour éviter de la fermer
     }
-}
-
-function renderDayDetail(date) {
-    const title = document.getElementById('calendarDayTitle');
-    const container = document.getElementById('calendarDayTransactions');
-    
-    if (!date) {
-        if (title) title.textContent = 'Sélectionnez un jour';
-        if (container) container.innerHTML = '<div class="empty-detail">Cliquez sur un jour pour voir les transactions</div>';
-        return;
-    }
-    
-    const tx = transactions.filter(t => t.date === date);
-    const dateObj = new Date(date + 'T00:00:00');
-    const formattedDate = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    if (title) title.textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
-    
-    if (!container) return;
-    if (tx.length === 0) {
-        container.innerHTML = '<div class="empty-detail">Aucune transaction ce jour</div>';
-        return;
-    }
-    
-    let totalRev = 0, totalExp = 0;
-    let html = '';
-    tx.forEach(t => {
-        if (t.type === 'revenue') totalRev += t.amount;
-        else totalExp += t.amount;
-        const amountClass = t.type === 'revenue' ? 'positive' : 'negative';
-        html += `
-            <div class="day-transaction-item">
-                <span class="tx-desc">${escapeHtml(t.description)}</span>
-                <span class="tx-cat">${escapeHtml(t.category || 'Non catégorisé')}</span>
-                <span class="tx-amount ${amountClass}">${t.type === 'revenue' ? '+' : '-'} ${t.amount.toFixed(2)} ${appSettings.currency}</span>
-            </div>
-        `;
-    });
-    
-    const net = totalRev - totalExp;
-    const netClass = net >= 0 ? 'positive' : 'negative';
-    html += `
-        <div style="display:flex; justify-content:space-between; padding:0.5rem 0.5rem 0; border-top:2px solid var(--border-light); margin-top:0.3rem; font-weight:600;">
-            <span>Total</span>
-            <span class="${netClass}">${net >= 0 ? '+' : ''}${net.toFixed(2)} ${appSettings.currency}</span>
-        </div>
-    `;
-    
-    container.innerHTML = html;
 }
 
 function initCalendar() {
@@ -1432,6 +2051,7 @@ function handleDuplicateSubmit(e) {
     const overwrite = overwriteTarget ? overwriteTarget.checked : false;
     const onlyRec = onlyRecurring ? onlyRecurring.checked : false;
     if (!source || !target) return alert('Sélectionnez deux mois.');
+    
     let sourceTx = transactions.filter(t => t.date && t.date.startsWith(source));
     if (onlyRec) {
         sourceTx = sourceTx.filter(t => t.recurring === true);
@@ -1440,19 +2060,61 @@ function handleDuplicateSubmit(e) {
         const msg = onlyRec ? 'Aucune transaction récurrente trouvée.' : `Aucune transaction en ${source}.`;
         return alert(msg);
     }
-    let newTx = overwrite ? transactions.filter(t => !t.date.startsWith(target)) : [...transactions];
+    
+    if (overwrite) {
+        const targetTx = transactions.filter(t => t.date && t.date.startsWith(target));
+        const accountsToUpdate = new Set();
+        targetTx.forEach(t => {
+            if (t.account !== 'general') accountsToUpdate.add(t.account);
+            if (t.target && t.target !== 'general') accountsToUpdate.add(t.target);
+        });
+        transactions = transactions.filter(t => !t.date.startsWith(target));
+        accountsToUpdate.forEach(accId => updateBankAccountBalance(accId));
+    }
+    
+    const accountsToUpdate = new Set();
     sourceTx.forEach(t => {
         const newDate = t.date.replace(source, target);
-        newTx.push({ 
-            ...t, 
-            id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6), 
+        const account = t.account || 'general';
+        const newTx = {
+            ...t,
+            id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
             date: newDate,
-            recurring: t.recurring 
-        });
+            recurring: t.recurring,
+            account: account,
+            source: t.source || account,
+            target: t.target || '',
+            isTransfer: t.isTransfer || false,
+            linkedId: null
+        };
+        if (t.isTransfer && t.target && t.target !== '') {
+            const tx2 = {
+                ...t,
+                id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6),
+                description: t.type === 'expense'
+                    ? `${t.description} (depuis ${getAccountName(t.source || t.account)})`
+                    : `${t.description} (vers ${getAccountName(t.source || t.account)})`,
+                date: newDate,
+                recurring: t.recurring,
+                account: t.target,
+                source: t.source || t.account,
+                target: t.target,
+                isTransfer: true,
+                linkedId: null
+            };
+            newTx.linkedId = tx2.id;
+            tx2.linkedId = newTx.id;
+            transactions.push(tx2);
+            if (t.target !== 'general') accountsToUpdate.add(t.target);
+        }
+        transactions.push(newTx);
+        if (account !== 'general') accountsToUpdate.add(account);
     });
-    transactions = newTx;
+    
+    accountsToUpdate.forEach(accId => updateBankAccountBalance(accId));
     saveToLocalStorage();
     fullRefresh();
+    renderBankAccounts();
     alert(`${sourceTx.length} transaction(s) dupliquée(s).`);
     const modal = document.getElementById('duplicateModal');
     if (modal) modal.classList.remove('active');
@@ -1576,6 +2238,7 @@ function initNavigation() {
             renderTransactionList();
             updateMonthSelect();
             updateCategoryFilter();
+            updateAccountFilter();
         } else if (viewId === 'settings') {
             openSettingsModal();
         }
@@ -1602,13 +2265,19 @@ function renderRecentTransactions() {
     let html = '';
     recent.forEach(t => {
         const amountClass = t.type === 'expense' ? 'amount-expense' : 'amount-revenue';
+        const accountDisplay = t.account && t.account !== 'general' ? 
+            `🏦 ${escapeHtml(bankAccounts.find(a => a.id === t.account)?.name || t.account)}` : '📊 Général';
+        const targetDisplay = t.target && t.target !== 'general' && t.target !== '' ? 
+            `→ 🏦 ${escapeHtml(bankAccounts.find(a => a.id === t.target)?.name || t.target)}` : '';
+        const transferBadge = t.isTransfer ? ' ↔' : '';
         html += `
             <div class="transaction-item" data-id="${t.id}">
                 <div class="transaction-info">
-                    <span class="transaction-desc">${escapeHtml(t.description)}</span>
+                    <span class="transaction-desc">${escapeHtml(t.description)}${transferBadge}</span>
                     <span class="transaction-category">${escapeHtml(t.category || 'Non catégorisé')}</span>
                     <span class="transaction-amount ${amountClass}">${formatAmountWithSettings(t.amount, t.type)}</span>
                     <span class="transaction-date">${t.date || ''}</span>
+                    <span class="transaction-account" style="font-size:0.65rem; color:var(--text-secondary);">${accountDisplay} ${targetDisplay}</span>
                 </div>
             </div>
         `;
@@ -1809,6 +2478,8 @@ function fullRefresh() {
     renderCalendar();
     updateMonthSelect();
     updateCategoryFilter();
+    updateAccountFilter();
+    updateTransactionSelects();
     saveToLocalStorage();
     initSortable();
     if (!document.querySelector('.transaction-item')) selectTransaction(null);
@@ -2204,6 +2875,28 @@ function init() {
         });
     }
 
+    // Modale de détail compte
+    document.getElementById('closeAccountDetailModalBtn').addEventListener('click', () => {
+        document.getElementById('accountDetailModal').classList.remove('active');
+    });
+    document.getElementById('accountDetailModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('accountDetailModal')) {
+            document.getElementById('accountDetailModal').classList.remove('active');
+        }
+    });
+    document.getElementById('accApplyFilters').addEventListener('click', applyAccountFilters);
+    document.getElementById('accResetFilters').addEventListener('click', resetAccountFilters);
+    document.getElementById('accExportCsvBtn').addEventListener('click', exportAccountDetailCSV);
+
+    // Modale de détail du jour (calendrier)
+    document.getElementById('closeDayDetailModalBtn').addEventListener('click', closeDayDetailModal);
+    document.getElementById('closeDayDetailModalBtn2').addEventListener('click', closeDayDetailModal);
+    document.getElementById('dayDetailModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('dayDetailModal')) {
+            closeDayDetailModal();
+        }
+    });
+
     // Duplication
     const openDuplicateBtn = document.getElementById('openDuplicateBtn');
     if (openDuplicateBtn) openDuplicateBtn.addEventListener('click', openDuplicateModal);
@@ -2339,6 +3032,7 @@ function importData(file) {
             saveBudgets();
             saveBankAccounts();
             saveSettingsToLocalStorage();
+            updateAllBankAccountsBalances();
             fullRefresh();
             renderSavingsAccounts();
             renderBudgets();
@@ -2400,10 +3094,29 @@ function switchView(viewId) {
         renderTransactionList();
         updateMonthSelect();
         updateCategoryFilter();
+        updateAccountFilter();
     } else if (viewId === 'settings') {
         openSettingsModal();
     }
 }
+
+// Gestionnaire pour l'affichage du champ de virement bancaire
+document.addEventListener('DOMContentLoaded', function() {
+    const bankOpType = document.getElementById('bankOpType');
+    if (bankOpType) {
+        bankOpType.addEventListener('change', function() {
+            const group = document.getElementById('bankTransferTargetGroup');
+            if (group) {
+                group.style.display = this.value === 'transfer' ? 'block' : 'none';
+            }
+        });
+    }
+    
+    const typeSelectEl = document.getElementById('typeSelect');
+    const targetSelectEl = document.getElementById('transactionTarget');
+    if (typeSelectEl) typeSelectEl.addEventListener('change', updateTransferInfo);
+    if (targetSelectEl) targetSelectEl.addEventListener('change', updateTransferInfo);
+});
 
 // Démarrer l'application
 init();
