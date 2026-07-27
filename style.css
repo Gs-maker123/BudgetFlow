@@ -1949,3 +1949,362 @@ body.dark-mode .bank-account-actions .delete-bank:hover {
     background: #dc2626;
     color: white;
 }
+
+/* Bouton Modifier dans les comptes bancaires */
+.bank-account-actions .edit-bank {
+    background: var(--category-bg);
+    color: var(--category-color);
+    border: 1px solid var(--border-light);
+    padding: 0.3rem 0.8rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.bank-account-actions .edit-bank:hover {
+    background: var(--revenue-color);
+    color: white;
+    transform: scale(1.02);
+}
+
+/* Badge transfert */
+.transfer-badge {
+    font-size: 0.6rem;
+    background: #7c3aed;
+    color: white;
+    padding: 0.1rem 0.4rem;
+    border-radius: 1rem;
+    margin-left: 0.3rem;
+    display: inline-block;
+}
+
+/* ===== MODALE DÉTAIL COMPTE ===== */
+.account-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.account-detail-balance {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--revenue-color);
+}
+.account-detail-balance.negative {
+    color: var(--expense-color);
+}
+
+.account-filters {
+    background: var(--category-bg);
+    border-radius: 1rem;
+    padding: 0.8rem 1rem;
+    margin-bottom: 1rem;
+}
+.account-filters .filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    align-items: flex-end;
+}
+.account-filters .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.account-filters .filter-group label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+.account-filters .filter-group input, 
+.account-filters .filter-group select {
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-light);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    min-width: 80px;
+}
+.account-filters .filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.account-transactions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.account-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+.account-detail-table th {
+    background: var(--category-bg);
+    color: var(--text-primary);
+    padding: 0.5rem;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+.account-detail-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-primary);
+}
+.account-detail-table tr:hover td {
+    background: var(--hover-bg);
+}
+.account-detail-table .credit {
+    color: var(--revenue-color);
+}
+.account-detail-table .debit {
+    color: var(--expense-color);
+}
+.account-detail-table .delete-op {
+    background: none;
+    border: none;
+    color: var(--expense-color);
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    border-radius: 1rem;
+    transition: 0.2s;
+}
+.account-detail-table .delete-op:hover {
+    background: #fee2e2;
+}
+
+.account-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+    padding: 0.8rem;
+    background: var(--category-bg);
+    border-radius: 1rem;
+}
+.account-stats .stat-item {
+    text-align: center;
+}
+.account-stats .stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+.account-stats .stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+.account-stats .stat-value.positive {
+    color: var(--revenue-color);
+}
+.account-stats .stat-value.negative {
+    color: var(--expense-color);
+}
+
+@media (max-width: 768px) {
+    .account-stats {
+        grid-template-columns: 1fr;
+    }
+    .account-filters .filter-row {
+        flex-direction: column;
+    }
+    .account-filters .filter-group {
+        width: 100%;
+    }
+    .account-filters .filter-group input,
+    .account-filters .filter-group select {
+        width: 100%;
+    }
+}
+
+/* ===== CALENDRIER - INFOS JOUR ===== */
+.calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.8rem;
+    cursor: pointer;
+    transition: 0.2s;
+    background: var(--hover-bg);
+    border: 1px solid transparent;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    min-height: 40px;
+    padding: 0.2rem;
+}
+.calendar-day .day-number {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+.calendar-day .day-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    font-size: 0.5rem;
+    line-height: 1.2;
+    margin-top: 0.1rem;
+}
+.calendar-day .day-balance {
+    font-weight: 600;
+}
+.calendar-day .day-balance.positive {
+    color: var(--revenue-color);
+}
+.calendar-day .day-balance.negative {
+    color: var(--expense-color);
+}
+.calendar-day .day-expense {
+    color: var(--expense-color);
+    font-weight: 500;
+}
+.calendar-day .day-revenue {
+    color: var(--revenue-color);
+    font-weight: 500;
+}
+
+/* ===== MODALE DÉTAIL DU JOUR (CALENDRIER) ===== */
+.day-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.day-detail-header h3 {
+    color: var(--text-primary);
+    font-size: 1.3rem;
+}
+.day-detail-close {
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: 0.2s;
+    line-height: 1;
+}
+.day-detail-close:hover {
+    color: var(--expense-color);
+    transform: scale(1.1);
+}
+
+.day-detail-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--category-bg);
+    border-radius: 1rem;
+}
+.day-detail-stat {
+    text-align: center;
+}
+.day-detail-stat .stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+.day-detail-stat .stat-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-top: 0.2rem;
+}
+.day-detail-stat .stat-value.positive {
+    color: var(--revenue-color);
+}
+.day-detail-stat .stat-value.negative {
+    color: var(--expense-color);
+}
+.day-detail-stat .stat-value.balance-positive {
+    color: var(--revenue-color);
+}
+.day-detail-stat .stat-value.balance-negative {
+    color: var(--expense-color);
+}
+
+.day-detail-transactions {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+}
+.day-detail-transactions .day-transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 0.85rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.day-detail-transactions .day-transaction-item:last-child {
+    border-bottom: none;
+}
+.day-detail-transactions .day-tx-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.day-detail-transactions .day-tx-icon {
+    font-size: 0.9rem;
+}
+.day-detail-transactions .day-tx-desc {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+.day-detail-transactions .day-tx-right {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+.day-detail-transactions .day-tx-category {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    background: var(--card-bg);
+    padding: 0.1rem 0.5rem;
+    border-radius: 1rem;
+}
+.day-detail-transactions .day-tx-amount {
+    font-weight: 600;
+    min-width: 80px;
+    text-align: right;
+}
+.day-detail-transactions .day-tx-amount.positive {
+    color: var(--revenue-color);
+}
+.day-detail-transactions .day-tx-amount.negative {
+    color: var(--expense-color);
+}
+.day-detail-transactions .empty-detail {
+    text-align: center;
+    padding: 2rem;
+    color: var(--empty-color);
+    font-style: italic;
+}
+
+@media (max-width: 600px) {
+    .day-detail-summary {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    .day-detail-stat .stat-value {
+        font-size: 1.1rem;
+    }
+}
