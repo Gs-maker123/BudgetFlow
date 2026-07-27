@@ -119,10 +119,6 @@
                 <span><span class="legend-dot negative"></span> Dépense</span>
                 <span><span class="legend-dot neutral"></span> Aucune transaction</span>
             </div>
-            <div class="calendar-day-detail" id="calendarDayDetail">
-                <h4 id="calendarDayTitle">Sélectionnez un jour</h4>
-                <div id="calendarDayTransactions"></div>
-            </div>
         </div>
     </div>
 
@@ -166,6 +162,13 @@
                     <input type="number" id="filterMinAmount" placeholder="Min">
                     <span>→</span>
                     <input type="number" id="filterMaxAmount" placeholder="Max">
+                </div>
+                <div class="filter-group">
+                    <label>Compte</label>
+                    <select id="filterAccount">
+                        <option value="">Tous</option>
+                        <option value="general">📊 Compte général</option>
+                    </select>
                 </div>
                 <button class="btn-filter-apply" id="applyFiltersBtn"><i class="fas fa-filter"></i> Appliquer</button>
                 <button class="btn-filter-reset" id="resetFiltersBtn"><i class="fas fa-undo"></i> Réinitialiser</button>
@@ -337,34 +340,44 @@
         <form id="transactionForm">
             <div class="form-group">
                 <label>Description *</label>
-                <input type="text" id="descInput" placeholder="Ex: Café, Salaire..." required>
+                <input type="text" id="descInput" placeholder="Ex: Salaire, Courses, Virement..." required>
             </div>
-            <div class="form-group">
-                <label>Montant (€) *</label>
-                <input type="number" id="amountInput" step="0.01" min="0.01" placeholder="0.00" required>
+            <div class="form-row">
+                <div class="form-group half">
+                    <label>Montant (€) *</label>
+                    <input type="number" id="amountInput" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group half">
+                    <label>Type</label>
+                    <select id="typeSelect">
+                        <option value="expense">💸 Dépense</option>
+                        <option value="revenue">💰 Revenu</option>
+                    </select>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Catégorie</label>
-                <input type="text" id="categoryInput" list="categorySuggestions" placeholder="Catégorie">
-                <datalist id="categorySuggestions">
-                    <option>Alimentation</option><option>Transport</option><option>Loyer</option>
-                    <option>Factures</option><option>Loisirs</option><option>Salaire</option>
-                    <option>Freelance</option><option>Santé</option><option>Éducation</option><option>Autre</option>
-                </datalist>
+            <div class="form-row">
+                <div class="form-group half">
+                    <label>Depuis le compte</label>
+                    <select id="transactionAccount">
+                        <option value="general">📊 Compte général</option>
+                    </select>
+                </div>
+                <div class="form-group half">
+                    <label>Vers (optionnel)</label>
+                    <select id="transactionTarget">
+                        <option value="">─── Sélectionner ───</option>
+                        <option value="general">📊 Compte général</option>
+                    </select>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Type</label>
-                <select id="typeSelect">
-                    <option value="expense">Dépense 💸</option>
-                    <option value="revenue">Revenu 💰</option>
-                </select>
+            <div id="transferInfo" style="display: none; padding: 0.5rem 0.8rem; background: var(--category-bg); border-radius: 0.8rem; margin: 0.5rem 0; font-size: 0.85rem; color: var(--text-secondary);">
+                <i class="fas fa-info-circle"></i> 
+                <span id="transferInfoText">Dépense → débit depuis "Depuis", crédit vers "Vers"</span>
             </div>
-            <div class="form-group"><label>Date</label><input type="date" id="dateInput"></div>
-            <!-- Case à cocher Transaction récurrente - CORRIGÉE -->
-            <div class="form-group" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.5rem 0; border-top: 1px solid var(--border-light); margin-top: 0.5rem;">
-                <input type="checkbox" id="recurringCheckbox" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
-                <label for="recurringCheckbox" style="cursor: pointer; font-weight: 500; color: var(--text-primary); margin: 0; font-size: 0.95rem;">
-                    <i class="fas fa-sync-alt" style="color: var(--revenue-color);"></i> Transaction récurrente (dupliquée automatiquement)
+            <div class="form-group" style="margin-top: 0.5rem;">
+                <label style="display: flex; align-items: center; gap: 0.8rem; cursor: pointer; font-weight: 500; color: var(--text-primary);">
+                    <input type="checkbox" id="recurringCheckbox" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+                    <span><i class="fas fa-sync-alt" style="color: var(--revenue-color);"></i> Transaction récurrente (dupliquée automatiquement)</span>
                 </label>
             </div>
             <div class="modal-actions">
@@ -528,6 +541,7 @@
     <div class="modal-content">
         <h3 id="bankModalTitle">Ajouter un compte bancaire</h3>
         <form id="bankAccountForm">
+            <input type="hidden" id="editBankAccountId">
             <div class="form-group">
                 <label>Nom du compte *</label>
                 <input type="text" id="bankName" placeholder="Ex: Compte courant, Livret A..." required>
@@ -539,12 +553,9 @@
                     <option value="livret">🏦 Livret d'épargne</option>
                     <option value="pel">📈 PEL</option>
                     <option value="lds">🏦 LDD</option>
+                    <option value="epargne">🏦 Épargne</option>
                     <option value="autre">📁 Autre</option>
                 </select>
-            </div>
-            <div class="form-group">
-                <label>Solde initial (€)</label>
-                <input type="number" id="bankInitialBalance" step="0.01" value="0">
             </div>
             <div class="form-group">
                 <label>Banque</label>
@@ -589,6 +600,129 @@
                 <button type="submit" class="btn-modal btn-save">Effectuer</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modale de détail d'un compte (épargne ou bancaire) -->
+<div id="accountDetailModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 900px;">
+        <div class="account-detail-header">
+            <h3 id="accountDetailTitle">📊 Détail du compte</h3>
+            <span class="account-detail-balance" id="accountDetailBalance">0.00 €</span>
+        </div>
+
+        <!-- Filtres -->
+        <div class="account-filters">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Période</label>
+                    <input type="date" id="accFilterDateFrom">
+                    <span>→</span>
+                    <input type="date" id="accFilterDateTo">
+                </div>
+                <div class="filter-group">
+                    <label>Type</label>
+                    <select id="accFilterType">
+                        <option value="">Tous</option>
+                        <option value="credit">💰 Crédits</option>
+                        <option value="debit">💸 Débits</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Montant min</label>
+                    <input type="number" id="accFilterMinAmount" placeholder="0">
+                </div>
+                <div class="filter-group">
+                    <label>Montant max</label>
+                    <input type="number" id="accFilterMaxAmount" placeholder="9999">
+                </div>
+                <div class="filter-group">
+                    <label>Description</label>
+                    <input type="text" id="accFilterSearch" placeholder="Rechercher...">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn-filter-apply" id="accApplyFilters"><i class="fas fa-filter"></i> Appliquer</button>
+                <button class="btn-filter-reset" id="accResetFilters"><i class="fas fa-undo"></i> Réinitialiser</button>
+            </div>
+        </div>
+
+        <!-- Liste des transactions -->
+        <div class="account-transactions">
+            <div class="account-transactions-header">
+                <span id="accTransactionCount">0 transaction(s)</span>
+                <span id="accTransactionStats"></span>
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table class="account-detail-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Montant</th>
+                            <th>Description</th>
+                            <th>Catégorie</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accDetailTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Statistiques -->
+        <div class="account-stats">
+            <div class="stat-item">
+                <span class="stat-label">💰 Total crédits</span>
+                <span class="stat-value positive" id="accTotalCredits">0.00 €</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">💸 Total débits</span>
+                <span class="stat-value negative" id="accTotalDebits">0.00 €</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">📊 Solde</span>
+                <span class="stat-value" id="accTotalBalance">0.00 €</span>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-modal btn-save" id="accExportCsvBtn"><i class="fas fa-file-csv"></i> Exporter CSV</button>
+            <button class="btn-modal btn-cancel" id="closeAccountDetailModalBtn">Fermer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modale de détail du jour (calendrier) -->
+<div id="dayDetailModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 700px;">
+        <div class="day-detail-header">
+            <h3 id="dayDetailTitle">📅 Détail du jour</h3>
+            <span class="day-detail-close" id="closeDayDetailModalBtn">&times;</span>
+        </div>
+        
+        <div class="day-detail-summary">
+            <div class="day-detail-stat">
+                <span class="stat-label">💰 Solde cumulé</span>
+                <span class="stat-value" id="dayDetailBalance">0.00 €</span>
+            </div>
+            <div class="day-detail-stat">
+                <span class="stat-label">📈 Revenus</span>
+                <span class="stat-value positive" id="dayDetailRevenue">0.00 €</span>
+            </div>
+            <div class="day-detail-stat">
+                <span class="stat-label">📉 Dépenses</span>
+                <span class="stat-value negative" id="dayDetailExpense">0.00 €</span>
+            </div>
+        </div>
+        
+        <div class="day-detail-transactions" id="dayDetailTransactions">
+            <div class="empty-detail">Aucune transaction ce jour</div>
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn-modal btn-cancel" id="closeDayDetailModalBtn2">Fermer</button>
+        </div>
     </div>
 </div>
 
@@ -646,11 +780,16 @@
 <script src="app.js"></script>
 <script>
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./service-worker.js')
-                .then(reg => console.log('Service Worker enregistré', reg))
-                .catch(err => console.log('Erreur service worker', err));
-        });
+        const protocol = window.location.protocol;
+        if (protocol === 'http:' || protocol === 'https:') {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('Service Worker enregistré', reg))
+                    .catch(err => console.log('Erreur service worker:', err));
+            });
+        } else {
+            console.log('Service Worker non supporté en file:// (utilisez un serveur local)');
+        }
     }
 </script>
 </body>
