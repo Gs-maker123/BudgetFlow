@@ -195,12 +195,12 @@ function loadInitialData() {
         migrateTransactionsWithTarget();
     } else {
         transactions = [
-            { id: '1', description: 'Salaire NET', amount: 2450, category: 'Salaire', type: 'revenue', date: '2025-03-01', recurring: true, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
-            { id: '2', description: 'Courses supermarché', amount: 89.5, category: 'Alimentation', type: 'expense', date: '2025-03-05', recurring: false, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
-            { id: '3', description: 'Netflix', amount: 25.99, category: 'Abonnements', type: 'expense', date: '2025-03-10', recurring: true, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
-            { id: '4', description: 'Transport essence', amount: 45.2, category: 'Transport', type: 'expense', date: '2025-02-15', recurring: false, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
-            { id: '5', description: 'Freelance design', amount: 380, category: 'Freelance', type: 'revenue', date: '2025-02-20', recurring: false, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
-            { id: '6', description: 'Restaurant', amount: 37.4, category: 'Loisirs', type: 'expense', date: '2025-01-25', recurring: false, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null }
+            { id: '1', description: '', amount: 0, category: '', type: '', date: '', recurring: false, account: '', source: '', target: '', isTransfer: false, linkedId: null },
+            { id: '2', description: '', amount: 0, category: '', type: '', date: '', recurring: false, account: '', source: '', target: '', isTransfer: false, linkedId: null },
+            { id: '3', description: '', amount: 0, category: '', type: '', date: '', recurring: false, account: '', source: '', target: '', isTransfer: false, linkedId: null },
+            { id: '4', description: '', amount: 0, category: '', type: '', date: '', recurring: false, account: '', source: '', target: '', isTransfer: false, linkedId: null },
+            { id: '5', description: '', amount: 0, category: '', type: '', date: '', recurring: false, account: '', source: '', target: '', isTransfer: false, linkedId: null },
+            { id: '6', description: '', amount: 0, category: '', type: '', date: '', recurring: false, account: '', source: '', target: '', isTransfer: false, linkedId: null }
         ];
         saveToLocalStorage();
     }
