@@ -50,7 +50,6 @@ const modalTitle = document.getElementById('modalTitle');
 const descInput = document.getElementById('descInput');
 const amountInput = document.getElementById('amountInput');
 const typeSelect = document.getElementById('typeSelect');
-const dateInput = document.getElementById('dateInput');
 const recurringCheckbox = document.getElementById('recurringCheckbox');
 const transactionAccount = document.getElementById('transactionAccount');
 const transactionTarget = document.getElementById('transactionTarget');
@@ -195,12 +194,12 @@ function loadInitialData() {
         migrateTransactionsWithTarget();
     } else {
         transactions = [
-            { id: '1', description: '', amount: 0, category: '', type: '', date: '', recurring: false, account: '', source: '', target: '', isTransfer: false, linkedId: null },
-            { id: '2', description: '', amount: 0, category: '', type: '', date: '', recurring: false, account: '', source: '', target: '', isTransfer: false, linkedId: null },
-            { id: '3', description: '', amount: 0, category: '', type: '', date: '', recurring: false, account: '', source: '', target: '', isTransfer: false, linkedId: null },
-            { id: '4', description: '', amount: 0, category: '', type: '', date: '', recurring: false, account: '', source: '', target: '', isTransfer: false, linkedId: null },
-            { id: '5', description: '', amount: 0, category: '', type: '', date: '', recurring: false, account: '', source: '', target: '', isTransfer: false, linkedId: null },
-            { id: '6', description: '', amount: 0, category: '', type: '', date: '', recurring: false, account: '', source: '', target: '', isTransfer: false, linkedId: null }
+            { id: '1', description: 'Salaire NET', amount: 2450, category: 'Salaire', type: 'revenue', date: '2025-03-01', recurring: true, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
+            { id: '2', description: 'Courses supermarché', amount: 89.5, category: 'Alimentation', type: 'expense', date: '2025-03-05', recurring: false, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
+            { id: '3', description: 'Netflix', amount: 25.99, category: 'Abonnements', type: 'expense', date: '2025-03-10', recurring: true, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
+            { id: '4', description: 'Transport essence', amount: 45.2, category: 'Transport', type: 'expense', date: '2025-02-15', recurring: false, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
+            { id: '5', description: 'Freelance design', amount: 380, category: 'Freelance', type: 'revenue', date: '2025-02-20', recurring: false, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null },
+            { id: '6', description: 'Restaurant', amount: 37.4, category: 'Loisirs', type: 'expense', date: '2025-01-25', recurring: false, account: 'general', source: 'general', target: '', isTransfer: false, linkedId: null }
         ];
         saveToLocalStorage();
     }
@@ -771,11 +770,6 @@ function openAddModal() {
     if (descInput) descInput.value = '';
     if (amountInput) amountInput.value = '';
     if (typeSelect) typeSelect.value = 'expense';
-    // Définir la date du jour par défaut
-    if (dateInput) {
-        const today = new Date();
-        dateInput.value = today.toISOString().slice(0, 10);
-    }
     if (recurringCheckbox) recurringCheckbox.checked = false;
     
     updateTransactionSelects();
@@ -804,7 +798,6 @@ function openEditModal(id) {
     if (descInput) descInput.value = mainTx.description;
     if (amountInput) amountInput.value = mainTx.amount;
     if (typeSelect) typeSelect.value = mainTx.type;
-    if (dateInput) dateInput.value = mainTx.date || new Date().toISOString().slice(0, 10);
     if (recurringCheckbox) recurringCheckbox.checked = mainTx.recurring || false;
     
     updateTransactionSelects();
@@ -828,7 +821,6 @@ function handleFormSubmit(e) {
     const description = descInput ? descInput.value.trim() : '';
     const amount = amountInput ? parseFloat(amountInput.value) : 0;
     const type = typeSelect ? typeSelect.value : 'expense';
-    let date = dateInput ? dateInput.value : '';
     const recurring = recurringCheckbox ? recurringCheckbox.checked : false;
     const source = transactionAccount ? transactionAccount.value : 'general';
     const target = transactionTarget ? transactionTarget.value : '';
@@ -836,7 +828,6 @@ function handleFormSubmit(e) {
     if (!description || !amount || amount <= 0) {
         return alert('Veuillez remplir tous les champs.');
     }
-    if (!date) date = new Date().toISOString().slice(0, 10);
     
     if (target && target !== '') {
         const tx1 = {
@@ -847,7 +838,7 @@ function handleFormSubmit(e) {
             amount: amount,
             category: '',
             type: type,
-            date: date,
+            date: new Date().toISOString().slice(0, 10),
             recurring: recurring,
             account: source,
             source: source,
@@ -864,7 +855,7 @@ function handleFormSubmit(e) {
             amount: amount,
             category: '',
             type: type === 'expense' ? 'revenue' : 'expense',
-            date: date,
+            date: new Date().toISOString().slice(0, 10),
             recurring: recurring,
             account: target,
             source: source,
@@ -889,7 +880,7 @@ function handleFormSubmit(e) {
             amount: amount,
             category: '',
             type: type,
-            date: date,
+            date: new Date().toISOString().slice(0, 10),
             recurring: recurring,
             account: source,
             source: source,
@@ -925,44 +916,62 @@ function renderSavingsAccounts() {
     const container = document.getElementById('savingsAccountsList');
     if (!container) return;
     
-    // Filtrer les comptes bancaires de type épargne (UNIQUEMENT depuis bankAccounts)
     const savingsTypes = ['livret', 'pel', 'lds', 'epargne'];
     const savingsBankAccounts = bankAccounts.filter(acc => savingsTypes.includes(acc.type));
     
-    if (savingsBankAccounts.length === 0) {
-        container.innerHTML = `
-            <div class="empty-savings">
-                <i class="fas fa-info-circle" style="font-size: 1.5rem; display: block; margin-bottom: 0.5rem; color: var(--text-secondary);"></i>
-                Aucun compte d'épargne. 
-                Créez un compte de type <strong>"Livret"</strong>, <strong>"PEL"</strong>, <strong>"LDD"</strong> ou <strong>"Épargne"</strong> 
-                dans l'onglet <strong>"Comptes bancaires"</strong>.
-            </div>
-        `;
+    let allSavings = [...savingsAccounts];
+    
+    savingsBankAccounts.forEach(bankAcc => {
+        const exists = allSavings.some(s => s.id === bankAcc.id || s.name === bankAcc.name);
+        if (!exists) {
+            allSavings.push({
+                id: bankAcc.id,
+                name: bankAcc.name,
+                balance: bankAcc.balance,
+                history: [],
+                isBankAccount: true,
+                bankType: bankAcc.type,
+                institution: bankAcc.institution
+            });
+        } else {
+            const existing = allSavings.find(s => s.id === bankAcc.id);
+            if (existing) {
+                existing.balance = bankAcc.balance;
+                existing.institution = bankAcc.institution;
+            }
+        }
+    });
+    
+    if (allSavings.length === 0) {
+        container.innerHTML = '<div class="empty-savings">Aucun compte épargne. Créez un compte de type "Livret", "PEL" ou "LDD" dans "Comptes bancaires".</div>';
         updateSavingsStats();
         return;
     }
     
     let html = '', total = 0, totalInterest = 0, goalsAchieved = 0, totalGoals = 0;
-    savingsBankAccounts.forEach(acc => {
+    allSavings.forEach(acc => {
         total += acc.balance;
         
-        // Vérifier si l'utilisateur a un objectif pour ce compte (stocké séparément)
-        const savingsGoal = savingsAccounts.find(s => s.id === acc.id)?.goal || null;
+        let interest = 0;
+        if (acc.goal && acc.goal.interest > 0) {
+            interest = acc.balance * (acc.goal.interest / 100);
+            totalInterest += interest;
+        }
         
         let goalStatus = '';
         let goalProgress = 0;
-        if (savingsGoal) {
+        if (acc.goal) {
             totalGoals++;
-            const target = savingsGoal.target || 0;
+            const target = acc.goal.target || 0;
             goalProgress = target > 0 ? Math.min((acc.balance / target) * 100, 100) : 0;
             if (goalProgress >= 100) goalsAchieved++;
             const goalClass = goalProgress >= 100 ? 'achieved' : 'not-achieved';
-            const deadline = savingsGoal.deadline ? `📅 ${formatDate(savingsGoal.deadline)}` : '';
-            const interestText = savingsGoal.interest > 0 ? `📈 ${savingsGoal.interest}%` : '';
+            const deadline = acc.goal.deadline ? `📅 ${formatDate(acc.goal.deadline)}` : '';
+            const interestText = acc.goal.interest > 0 ? `📈 ${acc.goal.interest}%` : '';
             goalStatus = `
                 <div class="goal-progress">
                     <div class="goal-header">
-                        <span>🎯 ${escapeHtml(savingsGoal.name)}</span>
+                        <span>🎯 ${escapeHtml(acc.goal.name)}</span>
                         <span>${acc.balance.toFixed(0)} / ${target.toFixed(0)} €</span>
                         <button class="goal-remove" data-account="${acc.id}">✕</button>
                     </div>
@@ -977,7 +986,8 @@ function renderSavingsAccounts() {
             `;
         }
         
-        const typeLabel = getBankTypeLabel(acc.type);
+        const count = acc.history ? acc.history.length : 0;
+        const typeLabel = acc.bankType ? getBankTypeLabel(acc.bankType) : '🏦 Épargne';
         const institutionDisplay = acc.institution ? ` • ${escapeHtml(acc.institution)}` : '';
         
         html += `
@@ -990,7 +1000,9 @@ function renderSavingsAccounts() {
                 ${goalStatus}
                 <div class="savings-account-actions">
                     <button class="operation" data-id="${acc.id}"><i class="fas fa-eye"></i> Détail</button>
+                    <button class="history" data-id="${acc.id}"><i class="fas fa-history"></i> Hist. (${count})</button>
                     <button class="goal-btn" data-id="${acc.id}"><i class="fas fa-bullseye"></i> Objectif</button>
+                    ${acc.isBankAccount ? '' : `<button class="delete-savings" data-id="${acc.id}"><i class="fas fa-trash"></i></button>`}
                 </div>
             </div>
         `;
@@ -1002,15 +1014,31 @@ function renderSavingsAccounts() {
     document.querySelectorAll('.operation').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = btn.dataset.id;
-            openAccountDetailModal(id, 'bank');
+            const isBank = bankAccounts.some(a => a.id === id);
+            openAccountDetailModal(id, isBank ? 'bank' : 'savings');
         });
     });
     
+    document.querySelectorAll('.history').forEach(btn => btn.addEventListener('click', () => { 
+        currentHistoryAccountId = btn.dataset.id; 
+        showHistoryModal(currentHistoryAccountId); 
+    }));
+    
     document.querySelectorAll('.goal-btn').forEach(btn => btn.addEventListener('click', () => openGoalModal(btn.dataset.id)));
+    document.querySelectorAll('.transfer-btn').forEach(btn => btn.addEventListener('click', () => openTransferModal(btn.dataset.id)));
+    
+    document.querySelectorAll('.delete-savings').forEach(btn => btn.addEventListener('click', () => {
+        if (confirm('Supprimer ce compte épargne ?')) {
+            savingsAccounts = savingsAccounts.filter(a => a.id !== btn.dataset.id);
+            saveSavingsAccounts();
+            renderSavingsAccounts();
+            renderDashboard();
+        }
+    }));
     
     document.querySelectorAll('.goal-remove').forEach(btn => btn.addEventListener('click', () => {
         if (confirm('Supprimer cet objectif ?')) {
-            const acc = savingsAccounts.find(s => s.id === btn.dataset.account);
+            const acc = savingsAccounts.find(a => a.id === btn.dataset.account);
             if (acc) { acc.goal = null; saveSavingsAccounts(); renderSavingsAccounts(); }
         }
     }));
@@ -1023,29 +1051,20 @@ function updateSavingsStats(total, totalInterest, goalsAchieved, totalGoals) {
     const totalInterestEl = document.getElementById('totalInterest');
     const goalsAchievedEl = document.getElementById('goalsAchieved');
     
-    // Calculer le total depuis les comptes bancaires de type épargne
     const savingsTypes = ['livret', 'pel', 'lds', 'epargne'];
     let bankSavingsTotal = 0;
-    let totalGoalsCount = 0;
-    let goalsAchievedCount = 0;
-    let totalInterestValue = 0;
-    
     bankAccounts.forEach(acc => {
         if (savingsTypes.includes(acc.type)) {
             bankSavingsTotal += acc.balance;
-            const goal = savingsAccounts.find(s => s.id === acc.id)?.goal;
-            if (goal) {
-                totalGoalsCount++;
-                if (goal.target && acc.balance >= goal.target) goalsAchievedCount++;
-                if (goal.interest) totalInterestValue += acc.balance * (goal.interest / 100);
-            }
         }
     });
     
-    if (totalSavingsEl) totalSavingsEl.textContent = `${bankSavingsTotal.toFixed(2)} ${appSettings.currency}`;
-    if (totalInterestEl) totalInterestEl.textContent = `${totalInterestValue.toFixed(2)} ${appSettings.currency}`;
+    const totalValue = (total || 0) + bankSavingsTotal;
+    
+    if (totalSavingsEl) totalSavingsEl.textContent = `${totalValue.toFixed(2)} ${appSettings.currency}`;
+    if (totalInterestEl) totalInterestEl.textContent = `${(totalInterest || 0).toFixed(2)} ${appSettings.currency}`;
     if (goalsAchievedEl) {
-        const goalsText = totalGoalsCount > 0 ? `${goalsAchievedCount}/${totalGoalsCount}` : '0/0';
+        const goalsText = totalGoals > 0 ? `${goalsAchieved || 0}/${totalGoals}` : '0/0';
         goalsAchievedEl.textContent = goalsText;
     }
 }
@@ -1154,47 +1173,44 @@ function showHistoryModal(id) {
 
 // ===== OBJECTIF D'ÉPARGNE =====
 function openGoalModal(accountId) {
-    const acc = bankAccounts.find(a => a.id === accountId);
+    const acc = savingsAccounts.find(a => a.id === accountId);
     if (!acc) return;
-    const goal = savingsAccounts.find(s => s.id === accountId)?.goal || null;
-    
-    document.getElementById('goalAccountId').value = accountId;
-    document.getElementById('goalModalTitle').textContent = `🎯 Objectif pour ${acc.name}`;
-    document.getElementById('goalName').value = goal?.name || '';
-    document.getElementById('goalTarget').value = goal?.target || '';
-    document.getElementById('goalDeadline').value = goal?.deadline || '';
-    document.getElementById('goalInterest').value = goal?.interest || 0;
-    document.getElementById('savingsGoalModal').classList.add('active');
+    const goalAccountId = document.getElementById('goalAccountId');
+    const goalModalTitle = document.getElementById('goalModalTitle');
+    const goalName = document.getElementById('goalName');
+    const goalTarget = document.getElementById('goalTarget');
+    const goalDeadline = document.getElementById('goalDeadline');
+    const goalInterest = document.getElementById('goalInterest');
+    if (goalAccountId) goalAccountId.value = accountId;
+    if (goalModalTitle) goalModalTitle.textContent = `🎯 Objectif pour ${acc.name}`;
+    if (goalName) goalName.value = acc.goal?.name || '';
+    if (goalTarget) goalTarget.value = acc.goal?.target || '';
+    if (goalDeadline) goalDeadline.value = acc.goal?.deadline || '';
+    if (goalInterest) goalInterest.value = acc.goal?.interest || 0;
+    const modal = document.getElementById('savingsGoalModal');
+    if (modal) modal.classList.add('active');
 }
 
 function handleGoalSubmit(e) {
     e.preventDefault();
-    const accountId = document.getElementById('goalAccountId').value;
-    const name = document.getElementById('goalName').value.trim();
-    const target = parseFloat(document.getElementById('goalTarget').value);
-    const deadline = document.getElementById('goalDeadline').value || null;
-    const interest = parseFloat(document.getElementById('goalInterest').value) || 0;
+    const goalAccountId = document.getElementById('goalAccountId');
+    const goalName = document.getElementById('goalName');
+    const goalTarget = document.getElementById('goalTarget');
+    const goalDeadline = document.getElementById('goalDeadline');
+    const goalInterest = document.getElementById('goalInterest');
+    const accountId = goalAccountId ? goalAccountId.value : '';
+    const name = goalName ? goalName.value.trim() : '';
+    const target = goalTarget ? parseFloat(goalTarget.value) : 0;
+    const deadline = goalDeadline ? goalDeadline.value || null : null;
+    const interest = goalInterest ? parseFloat(goalInterest.value) || 0 : 0;
     if (!name || !target || target <= 0) return alert('Veuillez remplir tous les champs.');
-    
-    const acc = bankAccounts.find(a => a.id === accountId);
-    if (!acc) return alert('Compte introuvable.');
-    
-    let existing = savingsAccounts.find(s => s.id === accountId);
-    if (existing) {
-        existing.goal = { name, target, deadline, interest };
-    } else {
-        savingsAccounts.push({
-            id: accountId,
-            name: acc.name,
-            balance: acc.balance,
-            history: [],
-            goal: { name, target, deadline, interest },
-            isBankAccount: true
-        });
-    }
+    const acc = savingsAccounts.find(a => a.id === accountId);
+    if (!acc) return;
+    acc.goal = { name, target, deadline, interest };
     saveSavingsAccounts();
     renderSavingsAccounts();
-    document.getElementById('savingsGoalModal').classList.remove('active');
+    const modal = document.getElementById('savingsGoalModal');
+    if (modal) modal.classList.remove('active');
 }
 
 // ===== TRANSFERT ENTRE COMPTES ÉPARGNE =====
@@ -1643,10 +1659,12 @@ function renderDayDetailModal(date) {
     const expenseContainer = document.getElementById('dayDetailExpense');
     const transactionsContainer = document.getElementById('dayDetailTransactions');
     
+    // Calculer le solde cumulé jusqu'à la date
     let cumulative = appSettings.initialAmount || 0;
     const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
     let totalRev = 0, totalExp = 0;
     
+    // Filtrer les transactions jusqu'à la date incluse
     const txUntilDate = transactions.filter(t => t.date <= date);
     txUntilDate.forEach(t => {
         if (t.type === 'revenue') {
@@ -1658,6 +1676,7 @@ function renderDayDetailModal(date) {
         }
     });
     
+    // Mettre à jour les statistiques
     const balanceClass = cumulative >= 0 ? 'balance-positive' : 'balance-negative';
     balanceContainer.textContent = `${cumulative >= 0 ? '+' : ''}${cumulative.toFixed(2)} ${appSettings.currency}`;
     balanceContainer.className = `stat-value ${balanceClass}`;
@@ -1668,6 +1687,7 @@ function renderDayDetailModal(date) {
     expenseContainer.textContent = `-${totalExp.toFixed(2)} ${appSettings.currency}`;
     expenseContainer.className = 'stat-value negative';
     
+    // Afficher les transactions
     if (tx.length === 0) {
         transactionsContainer.innerHTML = '<div class="empty-detail">Aucune transaction ce jour</div>';
         return;
