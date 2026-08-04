@@ -928,7 +928,6 @@ function renderSavingsAccounts() {
     const container = document.getElementById('savingsAccountsList');
     if (!container) return;
     
-    // Filtrer les comptes bancaires de type épargne (UNIQUEMENT depuis bankAccounts)
     const savingsTypes = ['livret', 'pel', 'lds', 'epargne'];
     const savingsBankAccounts = bankAccounts.filter(acc => savingsTypes.includes(acc.type));
     
@@ -949,7 +948,6 @@ function renderSavingsAccounts() {
     savingsBankAccounts.forEach(acc => {
         total += acc.balance;
         
-        // Vérifier si l'utilisateur a un objectif pour ce compte (stocké séparément)
         const savingsGoal = savingsAccounts.find(s => s.id === acc.id)?.goal || null;
         
         let goalStatus = '';
@@ -1026,7 +1024,6 @@ function updateSavingsStats(total, totalInterest, goalsAchieved, totalGoals) {
     const totalInterestEl = document.getElementById('totalInterest');
     const goalsAchievedEl = document.getElementById('goalsAchieved');
     
-    // Calculer le total depuis les comptes bancaires de type épargne
     const savingsTypes = ['livret', 'pel', 'lds', 'epargne'];
     let bankSavingsTotal = 0;
     let totalGoalsCount = 0;
@@ -2268,9 +2265,11 @@ function renderRecentTransactions() {
     container.innerHTML = html;
 }
 
+// ===== GRAPHIQUES AVEC POURCENTAGES =====
 function renderCharts() {
     const monthKey = currentFilterMonth || new Date().toISOString().slice(0, 7);
     
+    // Camembert avec pourcentages
     const categorySpending = {};
     transactions
         .filter(t => t.type === 'expense' && t.date.startsWith(monthKey))
@@ -2280,27 +2279,66 @@ function renderCharts() {
         });
     const labels = Object.keys(categorySpending);
     const data = Object.values(categorySpending);
+    const colors = ['#15803d', '#2563eb', '#7c3aed', '#dc2626', '#f59e0b', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#06b6d4'];
+    
     const ctxPie = document.getElementById('pieChart')?.getContext('2d');
     if (ctxPie) {
         if (pieChartInstance) pieChartInstance.destroy();
         if (data.length > 0) {
+            const total = data.reduce((sum, val) => sum + val, 0);
             pieChartInstance = new Chart(ctxPie, {
                 type: 'pie',
                 data: {
                     labels: labels,
                     datasets: [{
                         data: data,
-                        backgroundColor: ['#15803d', '#2563eb', '#7c3aed', '#dc2626', '#f59e0b', '#ec4899', '#14b8a6', '#f97316'],
-                        borderWidth: 1
+                        backgroundColor: colors.slice(0, data.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
                     }]
                 },
-                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: { size: 11 }
+                            }
+                        },
+                        datalabels: {
+                            color: '#ffffff',
+                            font: {
+                                weight: 'bold',
+                                size: 14
+                            },
+                            formatter: function(value, ctx) {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return percentage > 0 ? percentage + '%' : '';
+                            },
+                            display: function(ctx) {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((ctx.dataset.data[ctx.dataIndex] / total) * 100) : 0;
+                                return percentage > 3;
+                            },
+                            anchor: 'center',
+                            align: 'center',
+                            offset: 0
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
             });
         } else {
             ctxPie.clearRect(0, 0, ctxPie.canvas.width, ctxPie.canvas.height);
         }
     }
 
+    // Histogramme (inchangé)
     const monthTotals = {};
     const last6Months = [];
     for (let i = 5; i >= 0; i--) {
@@ -2333,14 +2371,41 @@ function renderCharts() {
                 data: {
                     labels: labelsBar,
                     datasets: [
-                        { label: 'Revenus', data: dataBarRev, backgroundColor: '#15803d' },
-                        { label: 'Dépenses', data: dataBarExp, backgroundColor: '#dc2626' }
+                        { 
+                            label: 'Revenus', 
+                            data: dataBarRev, 
+                            backgroundColor: '#15803d',
+                            borderRadius: 4
+                        },
+                        { 
+                            label: 'Dépenses', 
+                            data: dataBarExp, 
+                            backgroundColor: '#dc2626',
+                            borderRadius: 4
+                        }
                     ]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { beginAtZero: true } }
+                    plugins: {
+                        legend: { 
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + ' €';
+                                }
+                            }
+                        }
+                    }
                 }
             });
         } else {
@@ -2358,21 +2423,65 @@ function renderFullCharts() {
             const cat = t.category || 'Divers';
             categorySpending[cat] = (categorySpending[cat] || 0) + t.amount;
         });
+    const colors = ['#15803d', '#2563eb', '#7c3aed', '#dc2626', '#f59e0b', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#06b6d4'];
+    
     const ctxPieFull = document.getElementById('pieChartFull')?.getContext('2d');
     if (ctxPieFull) {
-        new Chart(ctxPieFull, {
-            type: 'pie',
-            data: {
-                labels: Object.keys(categorySpending),
-                datasets: [{
-                    data: Object.values(categorySpending),
-                    backgroundColor: ['#15803d', '#2563eb', '#7c3aed', '#dc2626', '#f59e0b', '#ec4899']
-                }]
-            },
-            options: { responsive: true }
-        });
+        const labels = Object.keys(categorySpending);
+        const data = Object.values(categorySpending);
+        if (data.length > 0) {
+            new Chart(ctxPieFull, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, data.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        datalabels: {
+                            color: '#ffffff',
+                            font: {
+                                weight: 'bold',
+                                size: 14
+                            },
+                            formatter: function(value, ctx) {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return percentage > 0 ? percentage + '%' : '';
+                            },
+                            display: function(ctx) {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((ctx.dataset.data[ctx.dataIndex] / total) * 100) : 0;
+                                return percentage > 3;
+                            },
+                            anchor: 'center',
+                            align: 'center',
+                            offset: 0
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        } else {
+            ctxPieFull.clearRect(0, 0, ctxPieFull.canvas.width, ctxPieFull.canvas.height);
+        }
     }
 
+    // Histogramme
     const monthTotals = {};
     const last6Months = [];
     for (let i = 5; i >= 0; i--) {
@@ -2392,26 +2501,32 @@ function renderFullCharts() {
     });
     const ctxBarFull = document.getElementById('barChartFull')?.getContext('2d');
     if (ctxBarFull) {
-        new Chart(ctxBarFull, {
-            type: 'bar',
-            data: {
-                labels: last6Months.map(m => {
-                    const [year, month] = m.split('-');
-                    return new Date(year, month-1, 1).toLocaleString('fr-FR', { month: 'short' });
-                }),
-                datasets: [
-                    { label: 'Revenus', data: last6Months.map(m => monthTotals[m]?.rev || 0), backgroundColor: '#15803d' },
-                    { label: 'Dépenses', data: last6Months.map(m => monthTotals[m]?.exp || 0), backgroundColor: '#dc2626' }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { position: 'top' } },
-                scales: { y: { beginAtZero: true } }
-            }
+        const labelsBar = last6Months.map(m => {
+            const [year, month] = m.split('-');
+            return new Date(year, month-1, 1).toLocaleString('fr-FR', { month: 'short' });
         });
+        const dataBarRev = last6Months.map(m => monthTotals[m]?.rev || 0);
+        const dataBarExp = last6Months.map(m => monthTotals[m]?.exp || 0);
+        if (dataBarRev.some(v => v > 0) || dataBarExp.some(v => v > 0)) {
+            new Chart(ctxBarFull, {
+                type: 'bar',
+                data: {
+                    labels: labelsBar,
+                    datasets: [
+                        { label: 'Revenus', data: dataBarRev, backgroundColor: '#15803d', borderRadius: 4 },
+                        { label: 'Dépenses', data: dataBarExp, backgroundColor: '#dc2626', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
     }
 
+    // Courbe d'évolution du solde
     const ctxLineFull = document.getElementById('lineChartFull')?.getContext('2d');
     if (ctxLineFull) {
         const sorted = [...transactions].sort((a,b) => new Date(a.date) - new Date(b.date));
@@ -2429,25 +2544,29 @@ function renderFullCharts() {
             dates.push(d);
             balanceData.push(cumulative[d]);
         });
-        new Chart(ctxLineFull, {
-            type: 'line',
-            data: {
-                labels: dates.map(d => d.slice(5)),
-                datasets: [{
-                    label: 'Solde cumulé',
-                    data: balanceData,
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37,99,235,0.1)',
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { position: 'top' } },
-                scales: { y: { beginAtZero: true } }
-            }
-        });
+        if (dates.length > 0) {
+            new Chart(ctxLineFull, {
+                type: 'line',
+                data: {
+                    labels: dates.map(d => d.slice(5)),
+                    datasets: [{
+                        label: 'Solde cumulé',
+                        data: balanceData,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37,99,235,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#2563eb',
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
     }
 }
 
