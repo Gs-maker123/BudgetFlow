@@ -77,8 +77,22 @@
                 <div class="card-icon"><i class="fas fa-arrow-down"></i></div>
             </div>
         </div>
+
+        <!-- Sélecteur de mois pour le tableau de bord -->
+        <div class="dashboard-month-filter">
+            <label for="dashboardMonthSelect">
+                <i class="fas fa-calendar-alt"></i> Période :
+            </label>
+            <select id="dashboardMonthSelect">
+                <option value="">📅 Tous les mois</option>
+            </select>
+            <button class="btn-dashboard-reset" id="dashboardMonthReset">
+                <i class="fas fa-undo-alt"></i> Réinitialiser
+            </button>
+        </div>
+
         <div class="category-summary-card" id="categorySummaryContainer">
-            <h3><i class="fas fa-chart-pie"></i> Totaux par catégorie</h3>
+            <h3><i class="fas fa-chart-pie"></i> Totaux par catégorie (tous les mois)</h3>
             <div id="categoryList" class="category-list"><div class="empty-cats">Aucune catégorie</div></div>
         </div>
         <div class="dashboard-grid">
