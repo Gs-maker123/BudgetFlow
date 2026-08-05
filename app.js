@@ -103,6 +103,12 @@ function applyTheme(theme) {
     isDarkMode = theme === 'dark';
     localStorage.setItem('budgetTheme', theme);
     updateThemeIcon();
+    
+    // Rafraîchir les graphiques après le changement de thème
+    setTimeout(() => {
+        renderCharts();
+        renderFullCharts();
+    }, 50);
 }
 
 function loadTheme() {
@@ -163,7 +169,13 @@ function loadSettings() {
 
 function updateInitialHintDisplay() {
     if (initialHintSpan) {
-        initialHintSpan.textContent = appSettings.initialAmount !== 0 ? `(départ: ${appSettings.initialAmount.toFixed(2)} ${appSettings.currency})` : '';
+        if (currentFilterMonth) {
+            const [year, month] = currentFilterMonth.split('-');
+            const monthName = new Date(year, month-1, 1).toLocaleString('fr-FR', { month: 'long' });
+            initialHintSpan.textContent = `(filtre: ${monthName} ${year})`;
+        } else {
+            initialHintSpan.textContent = appSettings.initialAmount !== 0 ? `(départ: ${appSettings.initialAmount.toFixed(2)} ${appSettings.currency})` : '';
+        }
     }
 }
 
@@ -374,9 +386,13 @@ function renderBudgets() {
     }
     const monthKey = currentFilterMonth || new Date().toISOString().slice(0, 7);
     let html = '';
+    
+    // Filtrer les transactions par mois
+    const monthTransactions = transactions.filter(t => t.date && t.date.startsWith(monthKey));
+    
     budgets.forEach(b => {
-        const spent = transactions
-            .filter(t => t.category === b.category && t.type === 'expense' && t.date.startsWith(monthKey))
+        const spent = monthTransactions
+            .filter(t => t.category === b.category && t.type === 'expense')
             .reduce((sum, t) => sum + t.amount, 0);
         const percent = b.amount > 0 ? Math.min((spent / b.amount) * 100, 100) : 0;
         const statusClass = percent > 90 ? 'danger' : percent > 70 ? 'warning' : '';
@@ -465,6 +481,19 @@ function updateSummary() {
     let totalRev = 0, totalExp = 0;
     const filtered = getFilteredTransactions();
 
+    // Mettre à jour le hint dans le titre du solde
+    const initialHint = document.getElementById('initialHint');
+    if (initialHint) {
+        if (currentFilterMonth) {
+            const [year, month] = currentFilterMonth.split('-');
+            const monthName = new Date(year, month-1, 1).toLocaleString('fr-FR', { month: 'long' });
+            initialHint.textContent = `(filtre: ${monthName} ${year})`;
+        } else {
+            initialHint.textContent = appSettings.initialAmount !== 0 ? 
+                `(départ: ${appSettings.initialAmount.toFixed(2)} ${appSettings.currency})` : '';
+        }
+    }
+
     function getCumulativeBalance(untilDate) {
         let balance = appSettings.initialAmount;
         const sorted = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -534,26 +563,45 @@ function updateSummary() {
 function renderCategorySummary() {
     const categoryMap = new Map();
     const filtered = getFilteredTransactions();
-    filtered.forEach(t => {
+    
+    // Filtrer par mois si sélectionné
+    let monthFiltered = filtered;
+    if (currentFilterMonth) {
+        monthFiltered = filtered.filter(t => t.date && t.date.startsWith(currentFilterMonth));
+    }
+    
+    monthFiltered.forEach(t => {
         const cat = t.category || 'Divers';
         if (!categoryMap.has(cat)) categoryMap.set(cat, { revenue: 0, expense: 0 });
         const entry = categoryMap.get(cat);
         if (t.type === 'revenue') entry.revenue += t.amount;
         else entry.expense += t.amount;
     });
+    
     const container = document.getElementById('categoryList');
     if (!container) return;
     const titleEl = document.querySelector('#categorySummaryContainer h3');
     if (titleEl) {
-        const monthName = currentFilterMonth ? new Date(currentFilterMonth).toLocaleString('fr-FR', { month: 'long', year: 'numeric' }) : 'tous les mois';
-        titleEl.innerHTML = `<i class="fas fa-chart-pie"></i> Totaux par catégorie (${monthName})`;
+        let monthDisplay = 'tous les mois';
+        if (currentFilterMonth) {
+            const [year, month] = currentFilterMonth.split('-');
+            monthDisplay = new Date(year, month-1, 1).toLocaleString('fr-FR', { month: 'long', year: 'numeric' });
+        }
+        titleEl.innerHTML = `<i class="fas fa-chart-pie"></i> Totaux par catégorie (${monthDisplay})`;
     }
     if (categoryMap.size === 0) {
-        container.innerHTML = '<div class="empty-cats">Aucune catégorie</div>';
+        container.innerHTML = `<div class="empty-cats">Aucune catégorie ${currentFilterMonth ? 'pour ce mois' : ''}</div>`;
         return;
     }
     let html = '';
-    for (let [cat, totals] of categoryMap.entries()) {
+    // Trier par montant net décroissant
+    const sortedCats = Array.from(categoryMap.entries()).sort((a, b) => {
+        const netA = a[1].revenue - a[1].expense;
+        const netB = b[1].revenue - b[1].expense;
+        return Math.abs(netB) - Math.abs(netA);
+    });
+    
+    for (let [cat, totals] of sortedCats) {
         const net = totals.revenue - totals.expense;
         const netClass = net >= 0 ? 'amount-revenue' : 'amount-expense';
         html += `
@@ -599,6 +647,89 @@ function initMonthFilter() {
     if (select) select.addEventListener('change', () => setMonthFilter(select.value || null));
     const resetBtn = document.getElementById('resetMonthFilter');
     if (resetBtn) resetBtn.addEventListener('click', () => setMonthFilter(null));
+}
+
+// ===== DASHBOARD MONTH FILTER =====
+function initDashboardMonthFilter() {
+    const select = document.getElementById('dashboardMonthSelect');
+    const resetBtn = document.getElementById('dashboardMonthReset');
+    
+    if (!select) return;
+    
+    // Remplir le sélecteur avec les mois disponibles
+    function populateDashboardMonths() {
+        const monthSet = new Set();
+        transactions.forEach(t => {
+            if (t.date) monthSet.add(t.date.substring(0, 7));
+        });
+        const months = Array.from(monthSet).sort().reverse();
+        
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">📅 Tous les mois</option>';
+        months.forEach(m => {
+            const [year, month] = m.split('-');
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = `${new Date(year, month-1, 1).toLocaleString('fr-FR', { month: 'long' })} ${year}`;
+            select.appendChild(opt);
+        });
+        
+        // Restaurer la valeur si elle existe encore
+        if (currentValue && months.includes(currentValue)) {
+            select.value = currentValue;
+        } else {
+            select.value = '';
+        }
+    }
+    
+    // Appliquer le filtre du dashboard
+    function applyDashboardFilter() {
+        const month = select.value || null;
+        currentFilterMonth = month;
+        
+        // Mettre à jour le sélecteur de mois principal (synchronisation)
+        const mainMonthSelect = document.getElementById('monthSelect');
+        if (mainMonthSelect) {
+            mainMonthSelect.value = month || '';
+        }
+        
+        // Rafraîchir les données du dashboard
+        renderCharts();
+        renderCategorySummary();
+        updateSummary();
+        renderBudgets();
+        renderRecentTransactions();
+        
+        // Mettre à jour le hint
+        updateInitialHintDisplay();
+    }
+    
+    // Événements
+    if (select) {
+        select.addEventListener('change', applyDashboardFilter);
+    }
+    
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            select.value = '';
+            applyDashboardFilter();
+        });
+    }
+    
+    // Initialiser
+    populateDashboardMonths();
+    
+    // Si un filtre mois est déjà actif, l'appliquer
+    if (currentFilterMonth) {
+        select.value = currentFilterMonth;
+        applyDashboardFilter();
+    }
+    
+    // Exposer les fonctions pour les mises à jour
+    window._dashboardMonth = {
+        populate: populateDashboardMonths,
+        apply: applyDashboardFilter
+    };
 }
 
 // ===== TRI =====
@@ -1977,8 +2108,6 @@ function renderCalendar() {
             renderCalendar();
             openDayDetailModal(calendarSelectedDate);
         }
-    } else {
-        // Si déjà sélectionné, on ne refait pas la modale pour éviter de la fermer
     }
 }
 
@@ -2214,6 +2343,15 @@ function initNavigation() {
             renderCharts();
             renderBudgets();
             renderRecentTransactions();
+            // Synchroniser le sélecteur de mois
+            const select = document.getElementById('dashboardMonthSelect');
+            if (select) {
+                if (currentFilterMonth && select.querySelector(`option[value="${currentFilterMonth}"]`)) {
+                    select.value = currentFilterMonth;
+                } else {
+                    select.value = '';
+                }
+            }
         } else if (viewId === 'transactions') {
             renderTransactionList();
             updateMonthSelect();
@@ -2269,23 +2407,31 @@ function renderRecentTransactions() {
 function renderCharts() {
     const monthKey = currentFilterMonth || new Date().toISOString().slice(0, 7);
     
-    // Camembert avec pourcentages
+    // Déterminer les couleurs en fonction du thème
+    const isDark = document.body.classList.contains('dark-mode');
+    const textColor = isDark ? '#e2e8f0' : '#4b5563';
+    const primaryTextColor = isDark ? '#e2e8f0' : '#0f172a';
+    const gridColor = isDark ? '#334155' : '#e2e8f0';
+    const emptyTextColor = isDark ? '#94a3b8' : '#4b5563';
+    
+    // Pie chart - Dépenses par catégorie avec pourcentages
     const categorySpending = {};
-    transactions
-        .filter(t => t.type === 'expense' && t.date.startsWith(monthKey))
-        .forEach(t => {
-            const cat = t.category || 'Divers';
-            categorySpending[cat] = (categorySpending[cat] || 0) + t.amount;
-        });
+    const monthFiltered = currentFilterMonth ? 
+        transactions.filter(t => t.type === 'expense' && t.date && t.date.startsWith(currentFilterMonth)) :
+        transactions.filter(t => t.type === 'expense');
+    
+    monthFiltered.forEach(t => {
+        const cat = t.category || 'Divers';
+        categorySpending[cat] = (categorySpending[cat] || 0) + t.amount;
+    });
+    
     const labels = Object.keys(categorySpending);
     const data = Object.values(categorySpending);
-    const colors = ['#15803d', '#2563eb', '#7c3aed', '#dc2626', '#f59e0b', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#06b6d4'];
-    
     const ctxPie = document.getElementById('pieChart')?.getContext('2d');
     if (ctxPie) {
         if (pieChartInstance) pieChartInstance.destroy();
         if (data.length > 0) {
-            const total = data.reduce((sum, val) => sum + val, 0);
+            const colors = ['#15803d', '#2563eb', '#7c3aed', '#dc2626', '#f59e0b', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#06b6d4'];
             pieChartInstance = new Chart(ctxPie, {
                 type: 'pie',
                 data: {
@@ -2294,19 +2440,30 @@ function renderCharts() {
                         data: data,
                         backgroundColor: colors.slice(0, data.length),
                         borderWidth: 2,
-                        borderColor: '#ffffff'
+                        borderColor: isDark ? '#1e293b' : '#ffffff'
                     }]
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: true,
                     plugins: {
-                        legend: {
+                        legend: { 
                             position: 'bottom',
                             labels: {
+                                color: primaryTextColor,
+                                font: { size: 11 },
                                 padding: 15,
                                 usePointStyle: true,
-                                pointStyle: 'circle',
-                                font: { size: 11 }
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                                    return `${context.label}: ${context.parsed.toFixed(2)} € (${percentage}%)`;
+                                }
                             }
                         },
                         datalabels: {
@@ -2335,19 +2492,42 @@ function renderCharts() {
             });
         } else {
             ctxPie.clearRect(0, 0, ctxPie.canvas.width, ctxPie.canvas.height);
+            ctxPie.fillStyle = emptyTextColor;
+            ctxPie.font = '14px system-ui';
+            ctxPie.textAlign = 'center';
+            ctxPie.fillText('Aucune dépense', ctxPie.canvas.width/2, ctxPie.canvas.height/2);
         }
     }
 
-    // Histogramme (inchangé)
+    // Bar chart - Évolution mensuelle
     const monthTotals = {};
     const last6Months = [];
-    for (let i = 5; i >= 0; i--) {
-        const d = new Date();
-        d.setMonth(d.getMonth() - i);
-        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+    
+    let startMonth, startYear;
+    if (currentFilterMonth) {
+        const [year, month] = currentFilterMonth.split('-').map(Number);
+        startMonth = month - 1;
+        startYear = year;
+    } else {
+        startMonth = currentMonth - 5;
+        startYear = currentYear;
+        if (startMonth < 0) {
+            startMonth += 12;
+            startYear--;
+        }
+    }
+    
+    for (let i = 0; i < 6; i++) {
+        const m = (startMonth + i) % 12;
+        const y = startYear + Math.floor((startMonth + i) / 12);
+        const key = `${y}-${String(m + 1).padStart(2,'0')}`;
         last6Months.push(key);
         monthTotals[key] = { rev: 0, exp: 0 };
     }
+    
     transactions.forEach(t => {
         if (!t.date) return;
         const key = t.date.substring(0, 7);
@@ -2356,6 +2536,7 @@ function renderCharts() {
             else monthTotals[key].exp += t.amount;
         }
     });
+    
     const labelsBar = last6Months.map(m => {
         const [year, month] = m.split('-');
         return new Date(year, month-1, 1).toLocaleString('fr-FR', { month: 'short' });
@@ -2375,22 +2556,27 @@ function renderCharts() {
                             label: 'Revenus', 
                             data: dataBarRev, 
                             backgroundColor: '#15803d',
-                            borderRadius: 4
+                            borderRadius: 4,
+                            maxBarThickness: 30
                         },
                         { 
                             label: 'Dépenses', 
                             data: dataBarExp, 
                             backgroundColor: '#dc2626',
-                            borderRadius: 4
+                            borderRadius: 4,
+                            maxBarThickness: 30
                         }
                     ]
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: true,
                     plugins: {
                         legend: { 
                             position: 'top',
                             labels: {
+                                color: primaryTextColor,
+                                font: { size: 11 },
                                 usePointStyle: true,
                                 pointStyle: 'circle'
                             }
@@ -2400,9 +2586,25 @@ function renderCharts() {
                         y: { 
                             beginAtZero: true,
                             ticks: {
+                                color: textColor,
+                                font: { size: 10 },
                                 callback: function(value) {
-                                    return value + ' €';
+                                    return value.toFixed(0) + ' €';
                                 }
+                            },
+                            grid: {
+                                color: gridColor,
+                                drawBorder: true
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: primaryTextColor,
+                                font: { size: 10 }
+                            },
+                            grid: {
+                                color: gridColor,
+                                drawBorder: true
                             }
                         }
                     }
@@ -2410,12 +2612,25 @@ function renderCharts() {
             });
         } else {
             ctxBar.clearRect(0, 0, ctxBar.canvas.width, ctxBar.canvas.height);
+            ctxBar.fillStyle = emptyTextColor;
+            ctxBar.font = '14px system-ui';
+            ctxBar.textAlign = 'center';
+            ctxBar.fillText('Aucune donnée', ctxBar.canvas.width/2, ctxBar.canvas.height/2);
         }
     }
 }
 
 function renderFullCharts() {
     const monthKey = currentFilterMonth || new Date().toISOString().slice(0, 7);
+    
+    // Déterminer les couleurs en fonction du thème
+    const isDark = document.body.classList.contains('dark-mode');
+    const textColor = isDark ? '#e2e8f0' : '#4b5563';
+    const primaryTextColor = isDark ? '#e2e8f0' : '#0f172a';
+    const gridColor = isDark ? '#334155' : '#e2e8f0';
+    const borderColor = isDark ? '#1e293b' : '#ffffff';
+    
+    // Pie chart complet
     const categorySpending = {};
     transactions
         .filter(t => t.type === 'expense' && t.date.startsWith(monthKey))
@@ -2423,13 +2638,12 @@ function renderFullCharts() {
             const cat = t.category || 'Divers';
             categorySpending[cat] = (categorySpending[cat] || 0) + t.amount;
         });
-    const colors = ['#15803d', '#2563eb', '#7c3aed', '#dc2626', '#f59e0b', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#06b6d4'];
-    
     const ctxPieFull = document.getElementById('pieChartFull')?.getContext('2d');
     if (ctxPieFull) {
         const labels = Object.keys(categorySpending);
         const data = Object.values(categorySpending);
         if (data.length > 0) {
+            const colors = ['#15803d', '#2563eb', '#7c3aed', '#dc2626', '#f59e0b', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#06b6d4'];
             new Chart(ctxPieFull, {
                 type: 'pie',
                 data: {
@@ -2438,7 +2652,7 @@ function renderFullCharts() {
                         data: data,
                         backgroundColor: colors.slice(0, data.length),
                         borderWidth: 2,
-                        borderColor: '#ffffff'
+                        borderColor: borderColor
                     }]
                 },
                 options: {
@@ -2447,6 +2661,7 @@ function renderFullCharts() {
                         legend: {
                             position: 'bottom',
                             labels: {
+                                color: primaryTextColor,
                                 padding: 15,
                                 usePointStyle: true,
                                 pointStyle: 'circle'
@@ -2478,10 +2693,14 @@ function renderFullCharts() {
             });
         } else {
             ctxPieFull.clearRect(0, 0, ctxPieFull.canvas.width, ctxPieFull.canvas.height);
+            ctxPieFull.fillStyle = textColor;
+            ctxPieFull.font = '14px system-ui';
+            ctxPieFull.textAlign = 'center';
+            ctxPieFull.fillText('Aucune dépense', ctxPieFull.canvas.width/2, ctxPieFull.canvas.height/2);
         }
     }
 
-    // Histogramme
+    // Bar chart complet
     const monthTotals = {};
     const last6Months = [];
     for (let i = 5; i >= 0; i--) {
@@ -2513,20 +2732,59 @@ function renderFullCharts() {
                 data: {
                     labels: labelsBar,
                     datasets: [
-                        { label: 'Revenus', data: dataBarRev, backgroundColor: '#15803d', borderRadius: 4 },
-                        { label: 'Dépenses', data: dataBarExp, backgroundColor: '#dc2626', borderRadius: 4 }
+                        { 
+                            label: 'Revenus', 
+                            data: dataBarRev, 
+                            backgroundColor: '#15803d', 
+                            borderRadius: 4 
+                        },
+                        { 
+                            label: 'Dépenses', 
+                            data: dataBarExp, 
+                            backgroundColor: '#dc2626', 
+                            borderRadius: 4 
+                        }
                     ]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { beginAtZero: true } }
+                    plugins: { 
+                        legend: { 
+                            position: 'top',
+                            labels: {
+                                color: primaryTextColor,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: {
+                                color: textColor,
+                                font: { size: 10 }
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: primaryTextColor,
+                                font: { size: 10 }
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        }
+                    }
                 }
             });
         }
     }
 
-    // Courbe d'évolution du solde
+    // Line chart complet
     const ctxLineFull = document.getElementById('lineChartFull')?.getContext('2d');
     if (ctxLineFull) {
         const sorted = [...transactions].sort((a,b) => new Date(a.date) - new Date(b.date));
@@ -2545,6 +2803,8 @@ function renderFullCharts() {
             balanceData.push(cumulative[d]);
         });
         if (dates.length > 0) {
+            const lineColor = isDark ? '#60a5fa' : '#2563eb';
+            const lineFill = isDark ? 'rgba(96,165,250,0.1)' : 'rgba(37,99,235,0.1)';
             new Chart(ctxLineFull, {
                 type: 'line',
                 data: {
@@ -2552,18 +2812,47 @@ function renderFullCharts() {
                     datasets: [{
                         label: 'Solde cumulé',
                         data: balanceData,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37,99,235,0.1)',
+                        borderColor: lineColor,
+                        backgroundColor: lineFill,
                         fill: true,
                         tension: 0.3,
-                        pointBackgroundColor: '#2563eb',
+                        pointBackgroundColor: lineColor,
                         pointRadius: 3
                     }]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { beginAtZero: true } }
+                    plugins: { 
+                        legend: { 
+                            position: 'top',
+                            labels: {
+                                color: primaryTextColor,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: {
+                                color: textColor,
+                                font: { size: 10 }
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: primaryTextColor,
+                                font: { size: 10 }
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        }
+                    }
                 }
             });
         }
@@ -2584,6 +2873,19 @@ function fullRefresh() {
     updateTransactionSelects();
     saveToLocalStorage();
     initSortable();
+    
+    // Mettre à jour le sélecteur du dashboard
+    if (window._dashboardMonth) {
+        window._dashboardMonth.populate();
+        // Appliquer le filtre si nécessaire
+        const select = document.getElementById('dashboardMonthSelect');
+        if (select && select.value !== '' && currentFilterMonth === null) {
+            // Si le filtre est actif dans le dashboard mais pas dans currentFilterMonth
+            currentFilterMonth = select.value;
+            window._dashboardMonth.apply();
+        }
+    }
+    
     if (!document.querySelector('.transaction-item')) selectTransaction(null);
     const recurringView = document.getElementById('view-recurring');
     if (recurringView && recurringView.classList.contains('active')) {
@@ -2630,6 +2932,7 @@ function init() {
     renderDashboard();
     renderBankAccounts();
     initMonthFilter();
+    initDashboardMonthFilter();
     initQuickActionBar();
     initCalendar();
     initSortControls();
@@ -3192,6 +3495,15 @@ function switchView(viewId) {
         renderCharts();
         renderBudgets();
         renderRecentTransactions();
+        // Synchroniser le sélecteur de mois
+        const select = document.getElementById('dashboardMonthSelect');
+        if (select) {
+            if (currentFilterMonth && select.querySelector(`option[value="${currentFilterMonth}"]`)) {
+                select.value = currentFilterMonth;
+            } else {
+                select.value = '';
+            }
+        }
     } else if (viewId === 'transactions') {
         renderTransactionList();
         updateMonthSelect();
